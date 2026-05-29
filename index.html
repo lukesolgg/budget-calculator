@@ -288,34 +288,44 @@
   function drawDonut(items, income, totalExpenses) {
     while (donut.firstChild) donut.removeChild(donut.firstChild);
 
-    const cx = 100, cy = 100, r = 78, stroke = 24;
+    const cx = 100, cy = 100, r = 78, stroke = 15;
     const circ = 2 * Math.PI * r;
-    const gapDeg = 5; // gap between segments (reveals the track behind)
+    const gapDeg = 4; // visible gap between segments
+    // A round cap overhangs the drawn dash by half the stroke width; convert
+    // that overhang to degrees so we can subtract it and keep gaps accurate.
+    const capDeg = (stroke / 2 / circ) * 360;
 
     // The full ring represents income. Expenses fill it proportionally and
-    // any leftover is left undrawn, so the background shows through as a gap.
-    // If expenses exceed income, the ring fills completely (overspending).
+    // any leftover is left undrawn. If expenses exceed income, the ring fills
+    // completely (overspending).
     const total = Math.max(income, totalExpenses);
     if (total <= 0) return;
 
-    // Full dark background ring — a clean, complete circle. The colored
-    // expense segments sit on top at the same width, and the gaps between
-    // them reveal this ring, evenly dividing each section.
+    // Outer border ring around the whole circle, slightly wider than the
+    // colored segments so it reads as a clean bordered band.
+    const border = document.createElementNS(SVGNS, "circle");
+    border.setAttribute("cx", cx);
+    border.setAttribute("cy", cy);
+    border.setAttribute("r", r);
+    border.setAttribute("fill", "none");
+    border.setAttribute("stroke", "#2c3547");
+    border.setAttribute("stroke-width", stroke + 9);
+    donut.appendChild(border);
+
+    // Inner dark track (the empty/leftover portion shows as this).
     const track = document.createElementNS(SVGNS, "circle");
     track.setAttribute("cx", cx);
     track.setAttribute("cy", cy);
     track.setAttribute("r", r);
     track.setAttribute("fill", "none");
-    track.setAttribute("stroke", "#262d3b");
-    track.setAttribute("stroke-width", stroke);
+    track.setAttribute("stroke", "#1b2230");
+    track.setAttribute("stroke-width", stroke + 3);
     donut.appendChild(track);
 
     let startDeg = 0; // cumulative degrees from the top, clockwise
     items.forEach((c) => {
       const frac = c.value / total;
       const segDeg = frac * 360;
-      const drawDeg = Math.max(0, segDeg - gapDeg);
-      const dash = (drawDeg / 360) * circ;
 
       const seg = document.createElementNS(SVGNS, "circle");
       seg.setAttribute("cx", cx);
@@ -325,10 +335,21 @@
       seg.setAttribute("stroke", c.color);
       seg.setAttribute("stroke-width", stroke);
       seg.setAttribute("stroke-linecap", "round");
-      seg.setAttribute("stroke-dasharray", `${dash} ${circ - dash}`);
-      // A circle's dash starts at 3 o'clock going clockwise.
-      // Rotate by -90 to begin at the top, then by the cumulative angle.
-      const rot = -90 + startDeg + gapDeg / 2;
+
+      // The colored pill (including its round caps) should span
+      // (segDeg - gapDeg), centred in the slot, leaving gapDeg/2 on each side.
+      // The drawn dash is the centreline, so subtract the two cap overhangs.
+      let dashOn = ((segDeg - gapDeg) / 360) * circ - stroke;
+      let rot;
+      if (dashOn < 0.5) {
+        // Tiny category: render a small rounded nub centred in its slot.
+        dashOn = 0.5;
+        rot = -90 + startDeg + segDeg / 2;
+      } else {
+        // Rotate -90 to start at the top, then to the slot start + cap offset.
+        rot = -90 + startDeg + gapDeg / 2 + capDeg;
+      }
+      seg.setAttribute("stroke-dasharray", `${dashOn} ${circ - dashOn}`);
       seg.setAttribute("transform", `rotate(${rot} ${cx} ${cy})`);
 
       const title = document.createElementNS(SVGNS, "title");
