@@ -300,7 +300,7 @@
 
     const cx = 100, cy = 100, r = 78, stroke = 18;
     const circ = 2 * Math.PI * r;
-    const gapDeg = 4; // visible gap between segments
+    const gapDeg = 2.5; // visible gap between segments
 
     // The full ring represents income. Expenses fill it proportionally and
     // any leftover is left undrawn. If expenses exceed income, the ring fills
@@ -378,36 +378,61 @@
     track.setAttribute("stroke-width", stroke);
     donut.appendChild(track);
 
+    // Each category is drawn as an annular-sector tile, then given a thin
+    // same-colour outline (linejoin/linecap round) for a slight corner round.
+    // The tile is inset by half that outline so its size stays accurate.
+    const DEG = Math.PI / 180;
+    const ptT = (radius, deg) => [
+      cx + radius * Math.cos((-90 + deg) * DEG),
+      cy + radius * Math.sin((-90 + deg) * DEG),
+    ];
+    const n3 = (v) => Math.round(v * 1000) / 1000;
+
+    const cornerStroke = 3;             // thin outline -> slight rounding
+    const rh = cornerStroke / 2;
+    const angInset = rh / r / DEG;      // degrees to pull ends in by
+    const roUse = r + stroke / 2 - rh;  // outer radius (inset)
+    const riUse = r - stroke / 2 + rh;  // inner radius (inset)
+    const minDeg = 2.4;                 // keep tiny categories visible
+
     let startDeg = 0; // cumulative degrees from the top, clockwise
     items.forEach((c) => {
       const frac = c.value / total;
       const segDeg = frac * 360;
 
-      const seg = document.createElementNS(SVGNS, "circle");
-      seg.setAttribute("cx", cx);
-      seg.setAttribute("cy", cy);
-      seg.setAttribute("r", r);
-      seg.setAttribute("fill", "none");
-      seg.setAttribute("stroke", `url(#grad-${c.key})`);
-      seg.setAttribute("stroke-width", stroke);
-      seg.setAttribute("stroke-linecap", "butt"); // square ends, fills the slot
-      seg.setAttribute("filter", "url(#segShadow)"); // lifted off the ring
-
-      // Each category is a rectangle filling its slot, with gapDeg between
-      // neighbours (gapDeg/2 on each side). Butt caps don't overhang, so the
-      // drawn arc maps directly to the visible width.
-      const minDeg = 1.8; // keep tiny categories visible as a thin sliver
-      const pillDeg = segDeg - gapDeg;
-      let dashOn, rot;
-      if (pillDeg < minDeg) {
-        dashOn = (minDeg / 360) * circ;
-        rot = -90 + startDeg + segDeg / 2 - minDeg / 2;
-      } else {
-        dashOn = (pillDeg / 360) * circ;
-        rot = -90 + startDeg + gapDeg / 2;
+      let a0 = startDeg + gapDeg / 2;
+      let a1 = startDeg + segDeg - gapDeg / 2;
+      if (a1 - a0 < minDeg) {
+        const mid = startDeg + segDeg / 2;
+        a0 = mid - minDeg / 2;
+        a1 = mid + minDeg / 2;
       }
-      seg.setAttribute("stroke-dasharray", `${dashOn} ${circ - dashOn}`);
-      seg.setAttribute("transform", `rotate(${rot} ${cx} ${cy})`);
+      let b0 = a0 + angInset;
+      let b1 = a1 - angInset;
+      if (b1 <= b0) { const m = (a0 + a1) / 2; b0 = m - 0.25; b1 = m + 0.25; }
+
+      const [ox0, oy0] = ptT(roUse, b0);
+      const [ox1, oy1] = ptT(roUse, b1);
+      const [ix1, iy1] = ptT(riUse, b1);
+      const [ix0, iy0] = ptT(riUse, b0);
+      const large = b1 - b0 > 180 ? 1 : 0;
+
+      const d = [
+        `M ${n3(ox0)} ${n3(oy0)}`,
+        `A ${n3(roUse)} ${n3(roUse)} 0 ${large} 1 ${n3(ox1)} ${n3(oy1)}`,
+        `L ${n3(ix1)} ${n3(iy1)}`,
+        `A ${n3(riUse)} ${n3(riUse)} 0 ${large} 0 ${n3(ix0)} ${n3(iy0)}`,
+        "Z",
+      ].join(" ");
+
+      const seg = document.createElementNS(SVGNS, "path");
+      seg.setAttribute("d", d);
+      seg.setAttribute("fill", `url(#grad-${c.key})`);
+      seg.setAttribute("stroke", `url(#grad-${c.key})`);
+      seg.setAttribute("stroke-width", cornerStroke);
+      seg.setAttribute("stroke-linejoin", "round");
+      seg.setAttribute("stroke-linecap", "round");
+      seg.setAttribute("filter", "url(#segShadow)"); // lifted off the ring
 
       const title = document.createElementNS(SVGNS, "title");
       title.textContent = `${c.name}: ${fmt(c.value)} (${(frac * 100).toFixed(1)}%)`;
