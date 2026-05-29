@@ -288,15 +288,34 @@
   function drawDonut(items, income, totalExpenses) {
     while (donut.firstChild) donut.removeChild(donut.firstChild);
 
-    const cx = 100, cy = 100, r = 78, stroke = 26;
+    const cx = 100, cy = 100, r = 78, stroke = 24;
     const circ = 2 * Math.PI * r;
-    const gapDeg = 2; // gap between segments
+    const gapDeg = 5; // gap between segments (reveals the track behind)
 
     // The full ring represents income. Expenses fill it proportionally and
     // any leftover is left undrawn, so the background shows through as a gap.
     // If expenses exceed income, the ring fills completely (overspending).
     const total = Math.max(income, totalExpenses);
     if (total <= 0) return;
+
+    // Dark track sits behind only the expense arc. The inter-segment gaps
+    // reveal it, dividing each section. The leftover region has no track,
+    // so the page background shows through.
+    const expFrac = Math.min(1, totalExpenses / total);
+    if (expFrac > 0) {
+      const tDash = expFrac * circ;
+      const track = document.createElementNS(SVGNS, "circle");
+      track.setAttribute("cx", cx);
+      track.setAttribute("cy", cy);
+      track.setAttribute("r", r);
+      track.setAttribute("fill", "none");
+      track.setAttribute("stroke", "#262d3b");
+      track.setAttribute("stroke-width", stroke + 9);
+      track.setAttribute("stroke-linecap", "round");
+      track.setAttribute("stroke-dasharray", `${tDash} ${circ - tDash}`);
+      track.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
+      donut.appendChild(track);
+    }
 
     let startDeg = 0; // cumulative degrees from the top, clockwise
     items.forEach((c) => {
