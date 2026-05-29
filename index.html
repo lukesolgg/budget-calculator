@@ -52,6 +52,25 @@
 
   .tagline { color: var(--muted); font-size: 14px; margin-top: 4px; }
 
+  .btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(180deg, #3b86ff 0%, #246cf0 100%);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(36, 108, 240, 0.35);
+    transition: filter .15s, transform .05s;
+  }
+  .btn-export:hover { filter: brightness(1.08); }
+  .btn-export:active { transform: translateY(1px); }
+  .btn-export:disabled { opacity: .6; cursor: default; }
+
   .layout {
     display: grid;
     grid-template-columns: 380px 1fr;
@@ -176,6 +195,14 @@
         <h1>Budget <span>Calculator</span></h1>
         <div class="tagline">Enter your income and expenses to see where your money goes.</div>
       </div>
+      <button id="exportBtn" class="btn-export" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span id="exportLabel">Export</span>
+      </button>
     </header>
 
     <div class="layout">
@@ -461,6 +488,123 @@
   incomeEl.addEventListener("input", render);
   rowsEl.addEventListener("input", render);
   render();
+
+  // --- Export to PNG ---------------------------------------------------------
+  const xmlEsc = (s) => String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  function currentState() {
+    const income = Math.max(0, parseFloat(incomeEl.value) || 0);
+    const vals = getValues();
+    const items = CATEGORIES
+      .map((c) => ({ name: c.name, color: c.color, value: vals[c.key] }))
+      .filter((c) => c.value > 0);
+    const totalExpenses = items.reduce((s, c) => s + c.value, 0);
+    return { income, items, totalExpenses, leftover: income - totalExpenses };
+  }
+
+  function buildExportSvg() {
+    const { income, items, totalExpenses, leftover } = currentState();
+    const total = Math.max(income, totalExpenses);
+    const W = 1100, H = 720;
+    const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+    // Embed a copy of the live donut chart, positioned and sized.
+    const donutClone = donut.cloneNode(true);
+    donutClone.removeAttribute("id");
+    donutClone.setAttribute("x", 60);
+    donutClone.setAttribute("y", 150);
+    donutClone.setAttribute("width", 470);
+    donutClone.setAttribute("height", 470);
+    const donutMarkup = new XMLSerializer().serializeToString(donutClone);
+    const dcx = 60 + 235, dcy = 150 + 235;
+
+    // Legend / breakdown rows on the right.
+    const lx = 600, xr = W - 48, rowH = 31;
+    let ly = 188;
+    let rows = `<text x="${lx}" y="158" font-size="13" letter-spacing="1.5" fill="#8b97a8">EXPENSES</text>`;
+    items.forEach((c) => {
+      const pct = total > 0 ? (c.value / total * 100).toFixed(1) + "%" : "";
+      rows +=
+        `<rect x="${lx}" y="${ly - 12}" width="15" height="15" rx="4" fill="${c.color}"/>` +
+        `<text x="${lx + 25}" y="${ly}" font-size="17" fill="#e8eef7">${xmlEsc(c.name)}</text>` +
+        `<text x="${xr - 150}" y="${ly}" font-size="15" fill="#8b97a8" text-anchor="end">${pct}</text>` +
+        `<text x="${xr}" y="${ly}" font-size="17" font-weight="600" fill="#f4efe6" text-anchor="end">${fmt(c.value)}</text>`;
+      ly += rowH;
+    });
+
+    // Summary row.
+    const sy = H - 96;
+    const loColor = leftover >= 0 ? "#4ade80" : "#f87171";
+    const stat = (x, val, label, color) =>
+      `<text x="${x}" y="${sy}" font-size="24" font-weight="700" fill="${color}">${val}</text>` +
+      `<text x="${x}" y="${sy + 20}" font-size="12" letter-spacing="1" fill="#8b97a8">${label}</text>`;
+    const summary =
+      `<line x1="${lx}" y1="${sy - 34}" x2="${xr}" y2="${sy - 34}" stroke="#232c3d"/>` +
+      stat(lx, fmt(income), "INCOME", "#f4efe6") +
+      stat(lx + 170, fmt(totalExpenses), "EXPENSES", "#f4efe6") +
+      stat(lx + 340, fmt(leftover), "LEFTOVER", loColor);
+
+    const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${FONT}">
+  <rect width="${W}" height="${H}" fill="#0b0f17"/>
+  <rect x="16" y="16" width="${W - 32}" height="${H - 32}" rx="24" fill="#121826" stroke="#232c3d"/>
+  <text x="48" y="74" font-size="32" font-weight="700" fill="#f4efe6">Budget <tspan fill="#4ea8ff">Calculator</tspan></text>
+  <text x="${W - 48}" y="74" font-size="16" fill="#8b97a8" text-anchor="end">${dateStr}</text>
+  <line x1="48" y1="100" x2="${W - 48}" y2="100" stroke="#232c3d"/>
+  ${donutMarkup}
+  <text x="${dcx}" y="${dcy - 4}" text-anchor="middle" font-size="44" font-weight="700" fill="#f4efe6">${fmt(income)}</text>
+  <text x="${dcx}" y="${dcy + 24}" text-anchor="middle" font-size="19" fill="#8b97a8">Monthly Income</text>
+  ${rows}
+  ${summary}
+</svg>`;
+    return { svg, W, H };
+  }
+
+  function exportPng() {
+    const btn = document.getElementById("exportBtn");
+    const label = document.getElementById("exportLabel");
+    btn.disabled = true;
+    const prev = label.textContent;
+    label.textContent = "Exporting…";
+
+    const { svg, W, H } = buildExportSvg();
+    const scale = 2; // crisp, print-friendly resolution
+    const img = new Image();
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const done = () => { btn.disabled = false; label.textContent = prev; };
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = W * scale;
+      canvas.height = H * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, W, H);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((png) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(png);
+        a.download = `budget-${new Date().toISOString().slice(0, 10)}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        done();
+      }, "image/png");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      done();
+      alert("Sorry, the export failed. Please try again.");
+    };
+    img.src = url;
+  }
+
+  document.getElementById("exportBtn").addEventListener("click", exportPng);
 </script>
 </body>
 </html>
