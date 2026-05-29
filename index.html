@@ -320,12 +320,14 @@
     filter.setAttribute("y", "-30%");
     filter.setAttribute("width", "160%");
     filter.setAttribute("height", "160%");
+    // Near-omnidirectional soft shadow (tiny downward bias) so each segment
+    // appears lifted on every side, not just where the gaps reveal the ring.
     const ds = document.createElementNS(SVGNS, "feDropShadow");
     ds.setAttribute("dx", "0");
-    ds.setAttribute("dy", "1.6");
-    ds.setAttribute("stdDeviation", "1.8");
+    ds.setAttribute("dy", "0.6");
+    ds.setAttribute("stdDeviation", "2.2");
     ds.setAttribute("flood-color", "#000000");
-    ds.setAttribute("flood-opacity", "0.55");
+    ds.setAttribute("flood-opacity", "0.6");
     filter.appendChild(ds);
     defs.appendChild(filter);
 
@@ -338,11 +340,12 @@
       g.setAttribute("cx", cx);
       g.setAttribute("cy", cy);
       g.setAttribute("r", rOuter);
+      // Subtle: a slightly lighter shade of the same colour on the inner edge,
+      // easing to the base colour and a touch darker on the outer edge.
       const stops = [
-        [innerOff,                       lighten(c.color, 0.55)], // shine
-        [innerOff + (1 - innerOff) * 0.3, lighten(c.color, 0.12)],
-        [innerOff + (1 - innerOff) * 0.62, c.color],
-        [1,                              darken(c.color, 0.22)],  // shaded outer edge
+        [innerOff,                        lighten(c.color, 0.20)], // lighter shade
+        [innerOff + (1 - innerOff) * 0.5, c.color],
+        [1,                               darken(c.color, 0.12)],  // slightly shaded edge
       ];
       stops.forEach(([off, col]) => {
         const s = document.createElementNS(SVGNS, "stop");
