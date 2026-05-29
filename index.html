@@ -217,7 +217,17 @@
 
   /* ---------- Debts ---------- */
   .debts-card { max-width: 940px; margin: 0 auto; }
-  .debt-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr .85fr 44px; gap: 12px; align-items: end; margin-bottom: 14px; }
+  .debt-item { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .debt-item:last-of-type { border-bottom: none; }
+  .debt-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr .85fr 44px; gap: 12px; align-items: end; }
+  .debt-extra { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+  .if-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; user-select: none; }
+  .if-toggle input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .if-date { display: none; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .if-date.show { display: inline-flex; }
+  .if-date input { background: #0c121d; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 8px 10px; font-size: 14px; outline: none; }
+  .if-date input:focus { border-color: var(--accent); }
+  .debt-row.is-free .d-rate { opacity: .4; }
   .debt-row .fld label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
   .debt-row input { width: 100%; background: #0c121d; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; transition: border-color .15s; }
   .debt-row input:focus { border-color: var(--accent); }
@@ -759,41 +769,73 @@
     const i = debtRowsEl.children.length;
     // Placeholders show an example; fields start blank for the user to fill in.
     const ph = DEBT_PLACEHOLDERS[i % DEBT_PLACEHOLDERS.length];
-    const row = document.createElement("div");
-    row.className = "debt-row";
-    row.innerHTML = `
-      <div class="fld">
-        <label>Debt name</label>
-        <input class="d-name" type="text" placeholder="e.g. ${ph.name}" value="" />
+    const item = document.createElement("div");
+    item.className = "debt-item";
+    item.innerHTML = `
+      <div class="debt-row">
+        <div class="fld">
+          <label>Debt name</label>
+          <input class="d-name" type="text" placeholder="e.g. ${ph.name}" value="" />
+        </div>
+        <div class="fld">
+          <label>Total balance</label>
+          <span class="money"><input class="d-bal" type="number" inputmode="decimal" min="0" placeholder="${ph.bal}" value="" /></span>
+        </div>
+        <div class="fld">
+          <label>Min. monthly payment</label>
+          <span class="money"><input class="d-min" type="number" inputmode="decimal" min="0" placeholder="${ph.min}" value="" /></span>
+        </div>
+        <div class="fld">
+          <label>Interest rate</label>
+          <span class="pct"><input class="d-rate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="${ph.rate}" value="" /></span>
+        </div>
+        <button class="del-debt" type="button" title="Remove debt" aria-label="Remove debt">&times;</button>
       </div>
-      <div class="fld">
-        <label>Total balance</label>
-        <span class="money"><input class="d-bal" type="number" inputmode="decimal" min="0" placeholder="${ph.bal}" value="" /></span>
-      </div>
-      <div class="fld">
-        <label>Min. monthly payment</label>
-        <span class="money"><input class="d-min" type="number" inputmode="decimal" min="0" placeholder="${ph.min}" value="" /></span>
-      </div>
-      <div class="fld">
-        <label>Interest rate</label>
-        <span class="pct"><input class="d-rate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="${ph.rate}" value="" /></span>
-      </div>
-      <button class="del-debt" type="button" title="Remove debt" aria-label="Remove debt">&times;</button>`;
-    row.querySelector(".del-debt").addEventListener("click", () => {
-      row.remove();
+      <div class="debt-extra">
+        <label class="if-toggle"><input class="d-iffree" type="checkbox" /> Interest-free period (e.g. 0% credit card)</label>
+        <span class="if-date"><span>until</span><input class="d-ifuntil" type="month" /></span>
+      </div>`;
+
+    const row = item.querySelector(".debt-row");
+    const chk = item.querySelector(".d-iffree");
+    const dateWrap = item.querySelector(".if-date");
+    chk.addEventListener("change", () => {
+      dateWrap.classList.toggle("show", chk.checked);
+      row.classList.toggle("is-free", chk.checked);
       refreshDebts();
     });
-    debtRowsEl.appendChild(row);
+    item.querySelector(".del-debt").addEventListener("click", () => {
+      item.remove();
+      refreshDebts();
+    });
+    debtRowsEl.appendChild(item);
     refreshDebts();
   }
 
   function getDebts() {
-    return [...debtRowsEl.querySelectorAll(".debt-row")].map((row) => ({
-      name: row.querySelector(".d-name").value.trim() || "Debt",
-      balance: Math.max(0, parseFloat(row.querySelector(".d-bal").value) || 0),
-      min: Math.max(0, parseFloat(row.querySelector(".d-min").value) || 0),
-      rate: Math.max(0, parseFloat(row.querySelector(".d-rate").value) || 0),
-    }));
+    return [...debtRowsEl.querySelectorAll(".debt-item")].map((item) => {
+      const ifFree = item.querySelector(".d-iffree").checked;
+      const until = item.querySelector(".d-ifuntil").value; // "YYYY-MM" or ""
+      return {
+        name: item.querySelector(".d-name").value.trim() || "Debt",
+        balance: Math.max(0, parseFloat(item.querySelector(".d-bal").value) || 0),
+        min: Math.max(0, parseFloat(item.querySelector(".d-min").value) || 0),
+        rate: Math.max(0, parseFloat(item.querySelector(".d-rate").value) || 0),
+        ifFree,
+        // Number of months from now that remain interest-free (0 if none/past).
+        freeMonths: ifFree ? monthsUntil(until) : 0,
+      };
+    });
+  }
+
+  // Whole months between now and the start of the given "YYYY-MM" month.
+  function monthsUntil(ym) {
+    if (!ym) return 0;
+    const [y, m] = ym.split("-").map(Number);
+    if (!y || !m) return 0;
+    const now = new Date();
+    const diff = (y - now.getFullYear()) * 12 + (m - 1 - now.getMonth());
+    return Math.max(0, diff);
   }
 
   function refreshDebts() {
@@ -837,7 +879,10 @@
   function simulate(debts, extra) {
     let bal = debts.map((d) => d.balance);
     const rate = debts.map((d) => d.rate / 100 / 12);
+    const free = debts.map((d) => d.freeMonths || 0);
     const min = debts.map((d) => d.min);
+    // Order by the rate that will actually apply once the 0% period ends, so an
+    // interest-free card isn't wastefully prioritised while it's still free.
     const order = debts.map((_, i) => i).sort((a, b) => rate[b] - rate[a]);
 
     let months = 0, totalInterest = 0;
@@ -847,9 +892,9 @@
       if (months >= CAP) return { months: Infinity, totalInterest, impossible: true };
       months++;
 
-      // accrue interest
+      // accrue interest (skipped while a debt is still within its 0% window)
       for (let i = 0; i < bal.length; i++) {
-        if (bal[i] > 0) { const it = bal[i] * rate[i]; bal[i] += it; totalInterest += it; }
+        if (bal[i] > 0 && months > free[i]) { const it = bal[i] * rate[i]; bal[i] += it; totalInterest += it; }
       }
 
       // budget for this month = sum of minimums (capped to balance) + extra
@@ -861,18 +906,25 @@
         pool += (min[i] - pay); // leftover minimum rolls into the pool
       }
 
-      // apply pool to highest-rate balances first
-      for (const i of order) {
+      // apply pool to the highest CURRENTLY-accruing rate first (a debt still
+      // in its 0% window counts as rate 0 this month, so we don't waste cash on
+      // it while interest is piling up elsewhere).
+      const monthOrder = order.slice().sort((a, b) => {
+        const ra = months <= free[a] ? 0 : rate[a];
+        const rb = months <= free[b] ? 0 : rate[b];
+        return rb - ra;
+      });
+      for (const i of monthOrder) {
         if (pool <= 0) break;
         if (bal[i] <= 0) continue;
         const pay = Math.min(pool, bal[i]);
         bal[i] -= pay; pool -= pay;
       }
 
-      // Detect a stall: if minimums can't cover interest and there's no extra.
+      // Detect a stall: if minimums can't cover the interest that's accruing.
       if (months > 1 && extra <= 0) {
         const totalMin = min.reduce((s, m, i) => s + (bal[i] > 0 ? m : 0), 0);
-        const totalInt = bal.reduce((s, b, i) => s + (b > 0 ? b * rate[i] : 0), 0);
+        const totalInt = bal.reduce((s, b, i) => s + (b > 0 && months > free[i] ? b * rate[i] : 0), 0);
         if (totalMin <= totalInt + 0.005 && bal.some((b) => b > 0.005)) {
           return { months: Infinity, totalInterest, impossible: true };
         }
@@ -1011,6 +1063,7 @@
   function simulateDetailed(debts, extra) {
     let bal = debts.map((d) => d.balance);
     const rate = debts.map((d) => d.rate / 100 / 12);
+    const free = debts.map((d) => d.freeMonths || 0);
     const min = debts.map((d) => d.min);
     const order = debts.map((_, i) => i).sort((a, b) => rate[b] - rate[a]);
 
@@ -1022,7 +1075,7 @@
       if (months >= CAP) break;
       months++;
       for (let i = 0; i < bal.length; i++) {
-        if (bal[i] > 0) { const it = bal[i] * rate[i]; bal[i] += it; totalInterest += it; }
+        if (bal[i] > 0 && months > free[i]) { const it = bal[i] * rate[i]; bal[i] += it; totalInterest += it; }
       }
       let pool = extra;
       for (let i = 0; i < bal.length; i++) {
@@ -1030,7 +1083,12 @@
         const pay = Math.min(min[i], bal[i]);
         bal[i] -= pay; pool += (min[i] - pay);
       }
-      for (const i of order) {
+      const monthOrder = order.slice().sort((a, b) => {
+        const ra = months <= free[a] ? 0 : rate[a];
+        const rb = months <= free[b] ? 0 : rate[b];
+        return rb - ra;
+      });
+      for (const i of monthOrder) {
         if (pool <= 0) break;
         if (bal[i] <= 0) continue;
         const pay = Math.min(pool, bal[i]);
@@ -1041,7 +1099,7 @@
       }
       if (months > 1 && extra <= 0) {
         const tMin = min.reduce((s, m, i) => s + (bal[i] > 0 ? m : 0), 0);
-        const tInt = bal.reduce((s, b, i) => s + (b > 0 ? b * rate[i] : 0), 0);
+        const tInt = bal.reduce((s, b, i) => s + (b > 0 && months > free[i] ? b * rate[i] : 0), 0);
         if (tMin <= tInt + 0.005 && bal.some((b) => b > 0.005)) { months = Infinity; break; }
       }
     }
@@ -1088,13 +1146,33 @@
     const orderEl = document.getElementById("payoffOrder");
     const colorBy = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
     orderEl.style.setProperty("--accent2", colorBy[plan.def.cls]);
-    orderEl.innerHTML = sim.order.map((i, idx) => {
+
+    // Display order = attack order, but a debt that's interest-free RIGHT NOW
+    // goes to the back (no point overpaying it while it costs nothing).
+    const displayOrder = sim.order.slice().sort((a, b) => {
+      const fa = debts[a].freeMonths > 0 ? 1 : 0;
+      const fb = debts[b].freeMonths > 0 ? 1 : 0;
+      if (fa !== fb) return fa - fb;            // accruing debts first
+      return debts[b].rate - debts[a].rate;     // then by APR
+    });
+
+    orderEl.innerHTML = displayOrder.map((i, idx) => {
       const d = debts[i];
       const when = sim.clearedMonth[i];
-      const focus = idx === 0 ? "<b>Attack this first</b> with all your spare cash." : `Keep paying the ${fmt(d.min)} minimum until it's your turn.`;
+      const rateLabel = d.freeMonths > 0
+        ? `0% for ${d.freeMonths} mo, then ${d.rate}%`
+        : `${d.rate}% APR`;
+      let focus;
+      if (d.freeMonths > 0) {
+        focus = `Interest-free for now — just pay the ${fmt(d.min)} minimum and clear it before the 0% ends (≈ month ${d.freeMonths}).`;
+      } else if (idx === 0) {
+        focus = "<b>Attack this first</b> with all your spare cash.";
+      } else {
+        focus = `Keep paying the ${fmt(d.min)} minimum until it's your turn.`;
+      }
       const cleared = when ? `Cleared by <b>month ${when}</b> (${monthsToStr(when)}).` : `Not cleared within the projection.`;
-      return `<li class="${idx === 0 ? "cleared-first" : ""}">
-        <div class="po-top"><span class="po-name">${xmlEsc(d.name)}</span><span class="po-rate">${d.rate}% APR</span></div>
+      return `<li class="${idx === 0 && d.freeMonths === 0 ? "cleared-first" : ""}">
+        <div class="po-top"><span class="po-name">${xmlEsc(d.name)}</span><span class="po-rate">${rateLabel}</span></div>
         <div class="po-meta">${fmt(d.balance)} balance · ${focus} ${cleared}</div>
       </li>`;
     }).join("");
@@ -1114,10 +1192,16 @@
     const list = document.getElementById("scheduleList");
     const items = [];
 
-    // Month 1: pay all minimums, throw the rest at the highest-interest debt.
-    const first = debts[sim.order[0]];
+    // Month 1: pay all minimums, throw the rest at the highest debt that's
+    // actually charging interest right now (skip any still in a 0% window).
+    const accruingOrder = sim.order.filter((i) => debts[i].freeMonths === 0);
+    const firstIdx = accruingOrder.length ? accruingOrder[0] : sim.order[0];
+    const first = debts[firstIdx];
+    const firstDesc = first.freeMonths > 0
+      ? `<b>${xmlEsc(first.name)}</b> (clear it before its 0% period ends)`
+      : `<b>${xmlEsc(first.name)}</b> — your highest-interest debt at ${first.rate}%`;
     items.push({ m: "Month 1", win: false, txt:
-      `Pay every minimum payment (<b>${fmt(debts.reduce((s, d) => s + d.min, 0))}</b> total), then put your remaining <b>${fmt(plan.extra)}</b> straight onto <b>${xmlEsc(first.name)}</b> — your highest-interest debt at ${first.rate}%.` });
+      `Pay every minimum payment (<b>${fmt(debts.reduce((s, d) => s + d.min, 0))}</b> total), then put your remaining <b>${fmt(plan.extra)}</b> straight onto ${firstDesc}.` });
 
     // A milestone each time a debt is cleared (in clear order).
     const clears = sim.order
