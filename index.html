@@ -123,6 +123,9 @@
   .income-input input { font-size: 20px; font-weight: 600; }
 
   .rows { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .expense-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 28px; }
+  @media (max-width: 900px) { .expense-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .expense-grid { grid-template-columns: 1fr; } }
 
   .row {
     display: grid;
@@ -276,86 +279,20 @@
 <body>
   <div class="wrap">
 
-    <!-- ============ SCREEN 1: BUDGET ============ -->
-    <section id="screen-budget" class="screen active">
+    <!-- ============ SCREEN 1: INPUTS (debts + budget) ============ -->
+    <section id="screen-inputs" class="screen active">
       <header>
         <div>
-          <h1>Budget <span>Calculator</span></h1>
-          <div class="tagline">Enter your income and expenses to see where your money goes.</div>
+          <h1>Debt Freedom <span>Planner</span></h1>
+          <div class="tagline">Add your debts and budget, then see your personalised payoff plans.</div>
         </div>
-        <button id="exportBtn" class="btn-export" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          <span id="exportLabel">Export</span>
-        </button>
       </header>
 
-      <div class="layout">
-        <!-- Inputs -->
-        <section class="card">
-          <div class="income-block">
-            <label class="field-label" for="income">Monthly Income</label>
-            <div class="money-input income-input">
-              <input id="income" type="number" inputmode="decimal" min="0" placeholder="0" value="6100" />
-            </div>
-          </div>
-
-          <label class="field-label">Expenses</label>
-          <div class="rows" id="rows"></div>
-        </section>
-
-        <!-- Chart -->
-        <section class="card chart-card">
-          <div class="donut-wrap">
-            <svg id="donut" viewBox="0 0 200 200"></svg>
-            <div class="center-text">
-              <div class="amount" id="center-amount">$0</div>
-              <div class="label">Monthly Income</div>
-            </div>
-          </div>
-
-          <div class="summary">
-            <div class="stat">
-              <div class="v" id="sum-income">$0</div>
-              <div class="k">Income</div>
-            </div>
-            <div class="stat">
-              <div class="v" id="sum-expenses">$0</div>
-              <div class="k">Expenses</div>
-            </div>
-            <div class="stat leftover" id="leftover-stat">
-              <div class="v" id="sum-leftover">$0</div>
-              <div class="k">Leftover</div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div class="actionbar">
-        <div class="spacer"></div>
-        <button id="toDebts" class="btn btn-primary" type="button">
-          Next: Debt Payoff Plans
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-    </section>
-
-    <!-- ============ SCREEN 2: DEBTS ============ -->
-    <section id="screen-debts" class="screen">
-      <div class="actionbar" style="margin-top:0;margin-bottom:18px;">
-        <button class="btn btn-ghost back-to-budget" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Back
-        </button>
-      </div>
-
-      <section class="card debts-card">
+      <!-- Debts first -->
+      <section class="card debts-card" style="margin-bottom:24px;">
         <div class="screen-head">
-          <h2>Tell us about your debts</h2>
-          <p>Add each debt to see personalised payoff strategies.</p>
+          <h2>1. Tell us about your debts</h2>
+          <p>Add each debt to unlock personalised payoff strategies.</p>
         </div>
 
         <div id="debtRows"></div>
@@ -369,31 +306,80 @@
           <span class="lab">Total minimum monthly payments</span>
           <span class="val" id="debtMinTotal">£0</span>
         </div>
-
-        <div class="actionbar">
-          <div class="spacer"></div>
-          <button id="toPlans" class="btn btn-primary" type="button" disabled>
-            See My Payoff Plans
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
       </section>
+
+      <!-- Budget (income + expenses) below -->
+      <section class="card debts-card">
+        <div class="screen-head">
+          <h2>2. Your income &amp; expenses</h2>
+          <p>This tells us how much you can put toward your debts each month.</p>
+        </div>
+
+        <div class="income-block" style="max-width:280px;">
+          <label class="field-label" for="income">Monthly Income</label>
+          <div class="money-input income-input">
+            <input id="income" type="number" inputmode="decimal" min="0" placeholder="0" value="6100" />
+          </div>
+        </div>
+
+        <label class="field-label">Expenses</label>
+        <div class="rows expense-grid" id="rows"></div>
+      </section>
+
+      <div class="actionbar">
+        <div class="spacer"></div>
+        <button id="toResults" class="btn btn-primary" type="button" disabled>
+          See My Results
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
     </section>
 
-    <!-- ============ SCREEN 3: PLANS ============ -->
-    <section id="screen-plans" class="screen">
+    <!-- ============ SCREEN 2: RESULTS (chart + plans) ============ -->
+    <section id="screen-results" class="screen">
       <div class="actionbar" style="margin-top:0;margin-bottom:18px;">
-        <button class="btn btn-ghost back-to-debts" type="button">
+        <button class="btn btn-ghost back-to-inputs" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          Back
+          Back to inputs
         </button>
         <div class="spacer"></div>
+        <button id="exportBtn" class="btn btn-ghost" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span id="exportLabel">Export Budget</span>
+        </button>
         <button id="exportPlanBtn" class="btn btn-ghost" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export Plan
         </button>
       </div>
 
+      <!-- Chart -->
+      <section class="card chart-card" style="margin-bottom:30px;">
+        <div class="donut-wrap">
+          <svg id="donut" viewBox="0 0 200 200"></svg>
+          <div class="center-text">
+            <div class="amount" id="center-amount">$0</div>
+            <div class="label">Monthly Income</div>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="stat">
+            <div class="v" id="sum-income">$0</div>
+            <div class="k">Income</div>
+          </div>
+          <div class="stat">
+            <div class="v" id="sum-expenses">$0</div>
+            <div class="k">Expenses</div>
+          </div>
+          <div class="stat leftover" id="leftover-stat">
+            <div class="v" id="sum-leftover">$0</div>
+            <div class="k">Leftover</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Plans -->
       <div class="screen-head" style="text-align:center;">
         <h2>Choose Your Debt Freedom Strategy</h2>
         <p>Three ways to clear your debt — pick the pace that fits your life.</p>
@@ -663,28 +649,22 @@
   render();
 
   // ===========================================================================
-  // SCREEN NAVIGATION
+  // SCREEN NAVIGATION (two screens: inputs -> results)
   // ===========================================================================
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
     document.getElementById(id).classList.add("active");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  document.getElementById("toDebts").addEventListener("click", () => {
-    if (debtRowsEl.children.length === 0) addDebtRow();
-    showScreen("screen-debts");
-  });
-  document.querySelectorAll(".back-to-budget").forEach((b) =>
-    b.addEventListener("click", () => showScreen("screen-budget")));
-  document.querySelectorAll(".back-to-debts").forEach((b) =>
-    b.addEventListener("click", () => showScreen("screen-debts")));
+  document.querySelectorAll(".back-to-inputs").forEach((b) =>
+    b.addEventListener("click", () => showScreen("screen-inputs")));
 
   // ===========================================================================
-  // SCREEN 2 — DEBTS
+  // DEBTS (top of screen 1)
   // ===========================================================================
   const debtRowsEl = document.getElementById("debtRows");
   const debtMinTotalEl = document.getElementById("debtMinTotal");
-  const toPlansBtn = document.getElementById("toPlans");
+  const toResultsBtn = document.getElementById("toResults");
   const MAX_DEBTS = 8;
 
   const DEBT_PLACEHOLDERS = [
@@ -740,13 +720,20 @@
     const valid = debts.filter((d) => d.balance > 0);
     const minTotal = valid.reduce((s, d) => s + d.min, 0);
     debtMinTotalEl.textContent = fmt(minTotal);
-    toPlansBtn.disabled = valid.length === 0;
+    toResultsBtn.disabled = valid.length === 0;
     document.getElementById("addDebt").disabled = debtRowsEl.children.length >= MAX_DEBTS;
   }
 
   document.getElementById("addDebt").addEventListener("click", () => addDebtRow());
   debtRowsEl.addEventListener("input", refreshDebts);
-  toPlansBtn.addEventListener("click", () => { buildPlans(); showScreen("screen-plans"); });
+  toResultsBtn.addEventListener("click", () => {
+    render();        // refresh donut + summary on the results screen
+    buildPlans();    // compute and render the three strategies
+    showScreen("screen-results");
+  });
+
+  // Seed the first debt row so the form isn't empty on load.
+  addDebtRow();
 
   // ===========================================================================
   // PAYOFF MATH
