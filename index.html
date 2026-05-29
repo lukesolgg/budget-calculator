@@ -228,6 +228,15 @@
   .if-date input { background: #0c121d; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 8px 10px; font-size: 14px; outline: none; }
   .if-date input:focus { border-color: var(--accent); }
   .debt-row.is-free .d-rate { opacity: .4; }
+  .mortgage-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; }
+  .mort-money, .mort-pct { position: relative; display: block; }
+  .mort-money::before { content: "£"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+  .mort-money input { padding-left: 26px !important; }
+  .mort-pct::after { content: "%"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+  .mort-pct input { padding-right: 26px !important; }
+  .mortgage-fields input, #savingsTotal, #savingsUse { width: 100%; background: #0c121d; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; }
+  .mortgage-fields input:focus, #savingsTotal:focus, #savingsUse:focus { border-color: var(--accent); }
+  @media (max-width: 700px) { .mortgage-fields { grid-template-columns: 1fr; } }
   .debt-row .fld label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
   .debt-row input { width: 100%; background: #0c121d; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; transition: border-color .15s; }
   .debt-row input:focus { border-color: var(--accent); }
@@ -284,6 +293,12 @@
   .alloc-legend .lr .sw { width: 12px; height: 12px; border-radius: 4px; }
   .alloc-legend .lr .amt { font-weight: 600; font-variant-numeric: tabular-nums; }
   .alloc-legend .lr .pc { color: var(--muted); font-size: 12px; margin-left: 8px; }
+  .fun-slider { width: 100%; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .fun-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .fun-head .fun-val { color: #f5953a; font-size: 16px; }
+  .fun-slider input[type=range] { width: 100%; accent-color: #f5953a; cursor: pointer; height: 6px; }
+  .fun-sub { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.5; }
+  .fun-sub b { color: var(--text); }
 
   .payoff-order { list-style: none; counter-reset: step; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
   .payoff-order li { counter-increment: step; position: relative; padding: 14px 14px 14px 54px; border-radius: 12px; background: #0c121d; border: 1px solid var(--border); }
@@ -321,6 +336,16 @@
   .iffree-stats .st .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
   .iffree-tip { margin-top: 14px; font-size: 13px; line-height: 1.55; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 12px; }
   .iffree-tip b { color: var(--text); }
+
+  /* ---------- Schedule table ---------- */
+  .sched-table-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+  .sched-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sched-table th, .sched-table td { padding: 9px 14px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  .sched-table th.num, .sched-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .sched-table thead th { position: sticky; top: 0; background: #141b29; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; z-index: 1; }
+  .sched-table tbody tr:nth-child(even) { background: #0e141f; }
+  .sched-table tbody tr:hover { background: #16203040; }
+  .sched-table td:first-child { color: var(--muted); }
 
   @media (max-width: 900px) {
     .plans-grid { grid-template-columns: 1fr; }
@@ -366,10 +391,50 @@
         </div>
       </section>
 
+      <!-- Mortgage & savings -->
+      <section class="card debts-card" style="margin-bottom:24px;">
+        <div class="screen-head">
+          <h2>2. Mortgage &amp; savings</h2>
+          <p>Optional — only fill these in if they apply to you.</p>
+        </div>
+
+        <label class="if-toggle" style="font-size:14px;margin-bottom:4px;">
+          <input id="mortgageToggle" type="checkbox" /> I have a mortgage (this replaces the Rent box)
+        </label>
+        <div id="mortgageFields" class="mortgage-fields" style="display:none;">
+          <div class="fld">
+            <label class="field-label" style="margin-bottom:6px;">Monthly mortgage payment</label>
+            <span class="money mort-money"><input id="mortgagePayment" type="number" inputmode="decimal" min="0" placeholder="1200" value="" /></span>
+          </div>
+          <div class="fld">
+            <label class="field-label" style="margin-bottom:6px;">Balance remaining <span style="text-transform:none;color:var(--muted)">(optional)</span></label>
+            <span class="money mort-money"><input id="mortgageBalance" type="number" inputmode="decimal" min="0" placeholder="185000" value="" /></span>
+          </div>
+          <div class="fld">
+            <label class="field-label" style="margin-bottom:6px;">Interest rate <span style="text-transform:none;color:var(--muted)">(optional)</span></label>
+            <span class="pct mort-pct"><input id="mortgageRate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="4.5" value="" /></span>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border);">
+          <label class="field-label" style="margin-bottom:6px;">Savings / cash on hand <span style="text-transform:none;color:var(--muted)">(optional)</span></label>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="fld" style="max-width:220px;flex:1;min-width:160px;">
+              <span class="money mort-money"><input id="savingsTotal" type="number" inputmode="decimal" min="0" placeholder="3000" value="" /></span>
+            </div>
+            <div class="fld" id="savingsUseWrap" style="display:none;max-width:260px;flex:1;min-width:200px;">
+              <label class="field-label" style="margin-bottom:6px;">Use now toward debt</label>
+              <span class="money mort-money"><input id="savingsUse" type="number" inputmode="decimal" min="0" placeholder="0" value="" /></span>
+            </div>
+          </div>
+          <p style="color:var(--muted);font-size:12px;margin:8px 0 0;">A one-off lump sum applied to your highest-interest debt before month 1. Tip: keep some back as an emergency fund.</p>
+        </div>
+      </section>
+
       <!-- Budget (income + expenses) below -->
       <section class="card debts-card">
         <div class="screen-head">
-          <h2>2. Your income &amp; expenses</h2>
+          <h2>3. Your income &amp; expenses</h2>
           <p>This tells us how much you can put toward your debts each month.</p>
         </div>
 
@@ -501,6 +566,15 @@
             </div>
           </div>
           <div id="allocLegend" class="alloc-legend"></div>
+
+          <div id="funSliderWrap" class="fun-slider" style="display:none;">
+            <div class="fun-head">
+              <span>🎉 Fun money</span>
+              <span class="fun-val" id="funVal">£0/mo</span>
+            </div>
+            <input id="funSlider" type="range" min="0" max="100" value="50" />
+            <div class="fun-sub">The rest of your spare cash goes to <b>savings</b>. Capped at 30% of your income.</div>
+          </div>
         </section>
 
         <!-- Payoff order -->
@@ -514,6 +588,10 @@
       <section class="card" id="scheduleCard" style="margin-top:24px;">
         <h3 style="margin:0 0 14px;">Month-by-month milestones</h3>
         <div id="scheduleList" class="schedule-list"></div>
+
+        <h3 style="margin:26px 0 4px;">Exact monthly payments</h3>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Exactly what to pay toward each debt every month. ✓ means that debt is cleared.</p>
+        <div id="scheduleTableWrap" class="sched-table-wrap"></div>
       </section>
     </section>
 
@@ -521,19 +599,18 @@
 
 <script>
   const CATEGORIES = [
-    { key: "debt",         name: "Debt",          color: "#4cb8f0", value: 1214 },
     { key: "rent",         name: "Rent",          color: "#f0556f", value: 1430 },
     { key: "utilities",    name: "Utilities",     color: "#46d17f", value: 330 },
     { key: "phone",        name: "Phone",         color: "#f2932f", value: 180 },
     { key: "gas",          name: "Gas",           color: "#9b6bf2", value: 400 },
     { key: "carInsurance", name: "Car Insurance", color: "#2fd6b0", value: 284 },
     { key: "food",         name: "Food",          color: "#ef4444", value: 600 },
-    { key: "tpFund",       name: "TP Fund",       color: "#e6c43c", value: 200 },
     { key: "medical",      name: "Medical",       color: "#d2691e", value: 80 },
     { key: "subscriptions",name: "Subscriptions", color: "#c04bd6", value: 80 },
     { key: "petInsurance", name: "Pet Insurance", color: "#4f6bf0", value: 50 },
     { key: "petFood",      name: "Pet Food",      color: "#5fd66f", value: 40 },
   ];
+  const MORTGAGE_COLOR = "#4cb8f0";
 
   const SVGNS = "http://www.w3.org/2000/svg";
   const rowsEl = document.getElementById("rows");
@@ -556,6 +633,7 @@
   CATEGORIES.forEach((c) => {
     const row = document.createElement("div");
     row.className = "row";
+    row.dataset.rowKey = c.key;
     row.innerHTML = `
       <span class="dot" style="background:${c.color}"></span>
       <span class="name">${c.name}</span>
@@ -565,20 +643,67 @@
     rowsEl.appendChild(row);
   });
 
+  // --- Mortgage & savings wiring ---
+  const mortgageToggle = document.getElementById("mortgageToggle");
+  const mortgageFields = document.getElementById("mortgageFields");
+  const mortgagePaymentEl = document.getElementById("mortgagePayment");
+  const rentRow = rowsEl.querySelector('[data-row-key="rent"]');
+  const savingsTotalEl = document.getElementById("savingsTotal");
+  const savingsUseEl = document.getElementById("savingsUse");
+  const savingsUseWrap = document.getElementById("savingsUseWrap");
+
+  mortgageToggle.addEventListener("change", () => {
+    const on = mortgageToggle.checked;
+    mortgageFields.style.display = on ? "" : "none";
+    rentRow.style.display = on ? "none" : "";      // mortgage replaces rent
+    if (on) rentRow.querySelector("input").value = ""; // clear rent so it isn't double-counted
+    refreshDebts();
+  });
+
+  // Show "use now" field only once some savings are entered.
+  savingsTotalEl.addEventListener("input", () => {
+    savingsUseWrap.style.display = (parseFloat(savingsTotalEl.value) > 0) ? "" : "none";
+  });
+
+  function mortgageInfo() {
+    if (!mortgageToggle.checked) return { active: false, payment: 0, balance: 0, rate: 0 };
+    return {
+      active: true,
+      payment: Math.max(0, parseFloat(mortgagePaymentEl.value) || 0),
+      balance: Math.max(0, parseFloat(document.getElementById("mortgageBalance").value) || 0),
+      rate: Math.max(0, parseFloat(document.getElementById("mortgageRate").value) || 0),
+    };
+  }
+
+  // Savings the user wants to deploy now (capped at total savings).
+  function savingsToDeploy() {
+    const total = Math.max(0, parseFloat(savingsTotalEl.value) || 0);
+    const use = Math.max(0, parseFloat(savingsUseEl.value) || 0);
+    return Math.min(use, total);
+  }
+
   function getValues() {
     const vals = {};
     rowsEl.querySelectorAll("input").forEach((inp) => {
       vals[inp.dataset.key] = Math.max(0, parseFloat(inp.value) || 0);
     });
+    // Mortgage payment counts as a living expense in place of rent.
+    const m = mortgageInfo();
+    if (m.active) { vals.rent = 0; vals.mortgage = m.payment; }
     return vals;
   }
 
   function render() {
     const income = Math.max(0, parseFloat(incomeEl.value) || 0);
     const vals = getValues();
-    const items = CATEGORIES
+    const m = mortgageInfo();
+    let items = CATEGORIES
       .map((c) => ({ ...c, value: vals[c.key] }))
       .filter((c) => c.value > 0);
+    // Add mortgage as its own slice (replaces the hidden rent row).
+    if (m.active && m.payment > 0) {
+      items = [{ key: "mortgage", name: "Mortgage", color: MORTGAGE_COLOR, value: m.payment }, ...items];
+    }
 
     const totalExpenses = items.reduce((s, c) => s + c.value, 0);
     const leftover = income - totalExpenses;
@@ -887,21 +1012,41 @@
   // PAYOFF MATH
   // ===========================================================================
 
-  // Money available to service debt = income minus every expense EXCEPT the
-  // budget's own "Debt" line (so we don't double-count it against real debts).
+  // Money available to service debt = income minus all living expenses
+  // (the category rows + mortgage, if active). The debts' own minimum payments
+  // are handled separately inside the simulation.
   function availableForDebt() {
     const income = Math.max(0, parseFloat(incomeEl.value) || 0);
     const vals = getValues();
-    let nonDebtExpenses = 0;
-    CATEGORIES.forEach((c) => { if (c.key !== "debt") nonDebtExpenses += vals[c.key] || 0; });
-    return Math.max(0, income - nonDebtExpenses);
+    let living = 0;
+    CATEGORIES.forEach((c) => { living += vals[c.key] || 0; });
+    living += vals.mortgage || 0;
+    return Math.max(0, income - living);
+  }
+
+  // Apply a one-off lump sum to balances, hitting the highest currently-accruing
+  // rate first (a 0%-window debt counts as rate 0 at month `atMonth`).
+  function applyLump(bal, lump, free, rate, atMonth) {
+    let pool = lump;
+    if (pool <= 0) return;
+    const ord = bal.map((_, i) => i).sort((a, b) => {
+      const ra = atMonth < free[a] ? 0 : rate[a];
+      const rb = atMonth < free[b] ? 0 : rate[b];
+      return rb - ra;
+    });
+    for (const i of ord) {
+      if (pool <= 0) break;
+      if (bal[i] <= 0) continue;
+      const pay = Math.min(pool, bal[i]);
+      bal[i] -= pay; pool -= pay;
+    }
   }
 
   // Simulate paying off debts month-by-month using the avalanche order
   // (highest interest first). `extra` is paid on top of all minimums and is
   // funnelled to the highest-rate debt; freed-up minimums roll over too.
   // Returns { months, totalInterest, impossible }.
-  function simulate(debts, extra) {
+  function simulate(debts, extra, lump) {
     let bal = debts.map((d) => d.balance);
     const rate = debts.map((d) => d.rate / 100 / 12);
     const free = debts.map((d) => d.freeMonths || 0);
@@ -909,6 +1054,9 @@
     // Order by the rate that will actually apply once the 0% period ends, so an
     // interest-free card isn't wastefully prioritised while it's still free.
     const order = debts.map((_, i) => i).sort((a, b) => rate[b] - rate[a]);
+
+    // Apply a savings lump sum up front to the highest CURRENTLY-accruing debt.
+    applyLump(bal, lump || 0, free, rate, 0);
 
     let months = 0, totalInterest = 0;
     const CAP = 1200; // 100 years
@@ -1082,15 +1230,16 @@
 
     renderInterestFreePlan(debts, available);
 
+    const lump = savingsToDeploy();
     plansComputed = PLAN_DEFS.map((p) => {
       const extra = surplus * p.share;
       const monthly = minTotal + extra;
-      const sim = simulate(debts, extra);
+      const sim = simulate(debts, extra, lump);
       // After debt-free, the freed monthly (what they were paying to debt)
       // plus they keep the rest of income for a 50/30/20 lifestyle.
       const income = Math.max(0, parseFloat(incomeEl.value) || 0);
       const savings = income * 0.20, wants = income * 0.30;
-      return { def: p, extra, monthly, sim, income, savings, wants };
+      return { def: p, extra, monthly, sim, income, savings, wants, lump };
     });
 
     // find fastest / least-interest for "best" highlighting
@@ -1169,28 +1318,36 @@
 
   // Detailed avalanche simulation that records the order debts are cleared and
   // the month each one disappears. `extra` is the spare cash beyond minimums.
-  function simulateDetailed(debts, extra) {
+  function simulateDetailed(debts, extra, lump) {
     let bal = debts.map((d) => d.balance);
     const rate = debts.map((d) => d.rate / 100 / 12);
     const free = debts.map((d) => d.freeMonths || 0);
     const min = debts.map((d) => d.min);
     const order = debts.map((_, i) => i).sort((a, b) => rate[b] - rate[a]);
 
+    // Up-front savings lump sum (before month 1).
+    const lumpApplied = bal.map((b) => b);
+    applyLump(bal, lump || 0, free, rate, 0);
+    const lumpPerDebt = lumpApplied.map((b0, i) => b0 - bal[i]); // how much lump hit each debt
+
     const clearedMonth = debts.map(() => null);
+    const schedule = []; // [{ pay:[...], bal:[...] }] per month
     let months = 0, totalInterest = 0;
     const CAP = 1200;
 
     while (bal.some((b) => b > 0.005)) {
       if (months >= CAP) break;
       months++;
+      const pay = debts.map(() => 0);
+
       for (let i = 0; i < bal.length; i++) {
         if (bal[i] > 0 && months > free[i]) { const it = bal[i] * rate[i]; bal[i] += it; totalInterest += it; }
       }
       let pool = extra;
       for (let i = 0; i < bal.length; i++) {
         if (bal[i] <= 0) continue;
-        const pay = Math.min(min[i], bal[i]);
-        bal[i] -= pay; pool += (min[i] - pay);
+        const p = Math.min(min[i], bal[i]);
+        bal[i] -= p; pay[i] += p; pool += (min[i] - p);
       }
       const monthOrder = order.slice().sort((a, b) => {
         const ra = months <= free[a] ? 0 : rate[a];
@@ -1200,22 +1357,54 @@
       for (const i of monthOrder) {
         if (pool <= 0) break;
         if (bal[i] <= 0) continue;
-        const pay = Math.min(pool, bal[i]);
-        bal[i] -= pay; pool -= pay;
+        const p = Math.min(pool, bal[i]);
+        bal[i] -= p; pay[i] += p; pool -= p;
       }
       for (let i = 0; i < bal.length; i++) {
         if (bal[i] <= 0.005 && clearedMonth[i] === null) clearedMonth[i] = months;
       }
+      schedule.push({ pay: pay.slice(), bal: bal.map((b) => Math.max(0, b)) });
       if (months > 1 && extra <= 0) {
         const tMin = min.reduce((s, m, i) => s + (bal[i] > 0 ? m : 0), 0);
         const tInt = bal.reduce((s, b, i) => s + (b > 0 && months > free[i] ? b * rate[i] : 0), 0);
         if (tMin <= tInt + 0.005 && bal.some((b) => b > 0.005)) { months = Infinity; break; }
       }
     }
-    return { months, totalInterest, clearedMonth, order };
+    return { months, totalInterest, clearedMonth, order, schedule, lumpPerDebt };
   }
 
   let detailKey = null; // currently-open plan, for export
+  let allocCtx = null;  // { income, living, toDebt, leftover } for the slider
+
+  // Render the allocation donut + legend, splitting leftover into fun/savings
+  // per the slider (fun capped at 30% of income).
+  function renderAllocation() {
+    if (!allocCtx) return;
+    const { income, living, toDebt, leftover } = allocCtx;
+    const slider = document.getElementById("funSlider");
+    const funCap = income * 0.30;
+    let fun = leftover * (parseFloat(slider.value) / 100);
+    fun = Math.min(fun, funCap, leftover);
+    const savings = Math.max(0, leftover - fun);
+    document.getElementById("funVal").textContent = `${fmt(fun)}/mo`;
+
+    const allocItems = [
+      { key: "living",  name: "Living expenses", color: "#4cb8f0", value: living },
+      { key: "debtpay", name: "Debt payments",   color: "#f0556f", value: toDebt },
+      { key: "fun",     name: "Fun money",       color: "#f5953a", value: fun },
+      { key: "savings", name: "Savings",         color: "#3ad07f", value: savings },
+    ].filter((a) => a.value > 0.5);
+
+    drawDonutInto(document.getElementById("allocDonut"), allocItems, income, "a");
+    document.getElementById("alloc-center").textContent = fmt(income);
+    document.getElementById("allocIncomeLbl").textContent = fmt(income);
+    document.getElementById("allocLegend").innerHTML = allocItems.map((a) =>
+      `<div class="lr"><span class="nm"><span class="sw" style="background:${a.color}"></span>${a.name}</span>` +
+      `<span><span class="amt">${fmt(a.value)}</span><span class="pc">${income > 0 ? Math.round(a.value / income * 100) : 0}%</span></span></div>`
+    ).join("");
+  }
+
+  document.getElementById("funSlider").addEventListener("input", renderAllocation);
 
   function openPlanDetail(key) {
     detailKey = key;
@@ -1224,34 +1413,32 @@
     const debts = getDebts().filter((d) => d.balance > 0);
     const income = Math.max(0, parseFloat(incomeEl.value) || 0);
     const vals = getValues();
+    const lump = savingsToDeploy();
 
-    // Non-debt living expenses (everything except the budget "Debt" line).
+    // Living expenses = all category rows + mortgage (if active).
     let living = 0;
-    CATEGORIES.forEach((c) => { if (c.key !== "debt") living += vals[c.key] || 0; });
+    CATEGORIES.forEach((c) => { living += vals[c.key] || 0; });
+    living += vals.mortgage || 0;
 
     const toDebt = Math.min(plan.monthly, Math.max(0, income - living)); // can't exceed what's available
     const leftover = Math.max(0, income - living - toDebt); // free / savings money
 
-    // --- Allocation chart: Living expenses + Debt payments + Free/Savings.
-    const allocItems = [
-      { key: "living", name: "Living expenses", color: "#4cb8f0", value: living },
-      { key: "debtpay", name: "Debt payments",  color: "#f0556f", value: toDebt },
-      { key: "free",    name: "Free / savings", color: "#3ad07f", value: leftover },
-    ].filter((a) => a.value > 0);
-
-    const allocSvg = document.getElementById("allocDonut");
-    drawDonutInto(allocSvg, allocItems, income, "a");
-    document.getElementById("alloc-center").textContent = fmt(income);
-    document.getElementById("allocIncomeLbl").textContent = fmt(income);
-
-    const legend = document.getElementById("allocLegend");
-    legend.innerHTML = allocItems.map((a) =>
-      `<div class="lr"><span class="nm"><span class="sw" style="background:${a.color}"></span>${a.name}</span>` +
-      `<span><span class="amt">${fmt(a.value)}</span><span class="pc">${income > 0 ? Math.round(a.value / income * 100) : 0}%</span></span></div>`
-    ).join("");
+    // --- Allocation chart: Living + Debt payments + (Fun / Savings from the
+    // leftover). The fun/savings split is driven by the slider; fun is capped
+    // at 30% of income.
+    allocCtx = { income, living, toDebt, leftover };
+    const slider = document.getElementById("funSlider");
+    const wrap = document.getElementById("funSliderWrap");
+    if (leftover > 0) {
+      wrap.style.display = "";
+      slider.value = 50; // default: half fun, half savings
+    } else {
+      wrap.style.display = "none";
+    }
+    renderAllocation();
 
     // --- Payoff order (avalanche) + per-debt clear month.
-    const sim = simulateDetailed(debts, plan.extra);
+    const sim = simulateDetailed(debts, plan.extra, lump);
     const orderEl = document.getElementById("payoffOrder");
     const colorBy = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
     orderEl.style.setProperty("--accent2", colorBy[plan.def.cls]);
@@ -1286,8 +1473,9 @@
       </li>`;
     }).join("");
 
-    // --- Month-by-month milestones.
-    renderSchedule(plan, debts, sim, toDebt);
+    // --- Month-by-month milestones + exact payment table.
+    renderSchedule(plan, debts, sim, toDebt, lump);
+    renderScheduleTable(debts, sim);
 
     // titles
     document.getElementById("detailTitle").textContent = plan.def.title;
@@ -1297,9 +1485,20 @@
     showScreen("screen-detail");
   }
 
-  function renderSchedule(plan, debts, sim, toDebt) {
+  function renderSchedule(plan, debts, sim, toDebt, lump) {
     const list = document.getElementById("scheduleList");
     const items = [];
+
+    // Savings lump sum applied before month 1 (if any).
+    if (lump > 0) {
+      const hit = sim.lumpPerDebt
+        .map((amt, i) => ({ name: debts[i].name, amt }))
+        .filter((x) => x.amt > 0.5)
+        .map((x) => `<b>${fmt(x.amt)}</b> off ${xmlEsc(x.name)}`)
+        .join(", ");
+      items.push({ m: "Start", win: true, txt:
+        `Use your <b>${fmt(lump)}</b> savings as a head-start lump sum — ${hit}. This shrinks the balance before any interest is charged.` });
+    }
 
     // Month 1: pay all minimums, throw the rest at the highest debt that's
     // actually charging interest right now (skip any still in a 0% window).
@@ -1321,7 +1520,7 @@
     clears.forEach((c, idx) => {
       const next = clears[idx + 1];
       const rolls = next
-        ? ` Roll its payment onto <b>${xmlEsc(next.name)}</b> — the snowball grows.`
+        ? ` Roll its payment onto <b>${xmlEsc(next.name)}</b> — your momentum builds.`
         : ` That was your last debt!`;
       items.push({ m: `Month ${c.month}`, win: true, txt:
         `🎉 <b>${xmlEsc(c.name)}</b> is fully paid off.${rolls}` });
@@ -1337,6 +1536,24 @@
     ).join("");
   }
 
+  // Exact per-debt payment table for every month until debt-free.
+  function renderScheduleTable(debts, sim) {
+    const wrap = document.getElementById("scheduleTableWrap");
+    if (!sim.schedule || !sim.schedule.length || !isFinite(sim.months)) {
+      wrap.innerHTML = `<p style="color:var(--muted);font-size:13px;margin:0;">A full month-by-month payment table isn't available for this plan (the debt isn't projected to clear).</p>`;
+      return;
+    }
+    const head = `<tr><th>Month</th>${debts.map((d) => `<th class="num">${xmlEsc(d.name)}</th>`).join("")}<th class="num">Total</th><th class="num">Balance left</th></tr>`;
+    const rows = sim.schedule.map((row, m) => {
+      const total = row.pay.reduce((s, p) => s + p, 0);
+      const balLeft = row.bal.reduce((s, b) => s + b, 0);
+      const cells = row.pay.map((p, i) =>
+        `<td class="num">${p > 0.5 ? fmt(p) : (row.bal[i] > 0.5 ? "—" : "✓")}</td>`).join("");
+      return `<tr><td>${m + 1}</td>${cells}<td class="num"><b>${fmt(total)}</b></td><td class="num">${fmt(balLeft)}</td></tr>`;
+    }).join("");
+    wrap.innerHTML = `<table class="sched-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+  }
+
   document.querySelectorAll(".back-to-results").forEach((b) =>
     b.addEventListener("click", () => showScreen("screen-results")));
 
@@ -1347,9 +1564,13 @@
   function currentState() {
     const income = Math.max(0, parseFloat(incomeEl.value) || 0);
     const vals = getValues();
-    const items = CATEGORIES
+    const m = mortgageInfo();
+    let items = CATEGORIES
       .map((c) => ({ name: c.name, color: c.color, value: vals[c.key] }))
       .filter((c) => c.value > 0);
+    if (m.active && m.payment > 0) {
+      items = [{ name: "Mortgage", color: MORTGAGE_COLOR, value: m.payment }, ...items];
+    }
     const totalExpenses = items.reduce((s, c) => s + c.value, 0);
     return { income, items, totalExpenses, leftover: income - totalExpenses };
   }
