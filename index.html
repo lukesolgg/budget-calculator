@@ -197,8 +197,9 @@
 
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
-    border: none; border-radius: 12px; padding: 13px 22px;
-    font-size: 15px; font-weight: 600; cursor: pointer;
+    border: none; border-radius: 10px; padding: 10px 18px;
+    font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    line-height: 1;
     transition: filter .15s, transform .05s, opacity .15s;
   }
   .btn:active { transform: translateY(1px); }
@@ -230,7 +231,8 @@
   .debt-total { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--border); }
   .debt-total .lab { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
   .debt-total .val { font-size: 22px; font-weight: 700; }
-  #addDebt { margin-top: 4px; }
+  #addDebt { margin-top: 4px; padding: 9px 14px; font-size: 13px; }
+  #addDebt svg { width: 15px; height: 15px; }
 
   /* ---------- Plans ---------- */
   .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
