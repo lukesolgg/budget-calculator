@@ -394,20 +394,33 @@
     const angInset = rh / r / DEG;      // degrees to pull ends in by
     const roUse = r + stroke / 2 - rh;  // outer radius (inset)
     const riUse = r - stroke / 2 + rh;  // inner radius (inset)
-    const minDeg = 2.4;                 // keep tiny categories visible
+    const minDeg = 2.4;                 // minimum visible tile width
+    const minSlot = minDeg + gapDeg;    // guarantees a tile AND a full gap fit
+
+    // Give each category an angular slot. Tiny categories get a minimum slot
+    // so they stay visible and keep a real gap; the extra angle is borrowed
+    // from larger categories in proportion to their spare room. This keeps the
+    // gap consistent all the way round (no bunching of the small ones).
+    const expDeg = items.reduce((s, c) => s + (c.value / total) * 360, 0);
+    const slots = items.map((c) => ({
+      c,
+      frac: c.value / total,
+      slot: Math.max((c.value / total) * 360, minSlot),
+    }));
+    let excess = slots.reduce((s, x) => s + x.slot, 0) - expDeg;
+    if (excess > 0) {
+      const headroom = slots.reduce((s, x) => s + Math.max(0, x.slot - minSlot), 0);
+      if (headroom > 0) {
+        slots.forEach((x) => {
+          x.slot -= excess * (Math.max(0, x.slot - minSlot) / headroom);
+        });
+      }
+    }
 
     let startDeg = 0; // cumulative degrees from the top, clockwise
-    items.forEach((c) => {
-      const frac = c.value / total;
-      const segDeg = frac * 360;
-
-      let a0 = startDeg + gapDeg / 2;
-      let a1 = startDeg + segDeg - gapDeg / 2;
-      if (a1 - a0 < minDeg) {
-        const mid = startDeg + segDeg / 2;
-        a0 = mid - minDeg / 2;
-        a1 = mid + minDeg / 2;
-      }
+    slots.forEach(({ c, frac, slot }) => {
+      const a0 = startDeg + gapDeg / 2;
+      const a1 = startDeg + slot - gapDeg / 2;
       let b0 = a0 + angInset;
       let b1 = a1 - angInset;
       if (b1 <= b0) { const m = (a0 + a1) / 2; b0 = m - 0.25; b1 = m + 0.25; }
@@ -440,7 +453,7 @@
       seg.appendChild(title);
 
       donut.appendChild(seg);
-      startDeg += segDeg;
+      startDeg += slot;
     });
   }
 
