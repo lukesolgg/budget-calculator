@@ -242,6 +242,16 @@
 
   const fmt = (n) => (n < 0 ? "-£" : "£") + Math.abs(Math.round(n)).toLocaleString("en-GB");
 
+  // --- colour helpers for segment gradients ---
+  const hexToRgb = (h) => {
+    h = h.replace("#", "");
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  };
+  const mix = (rgb, target, t) => rgb.map((c, i) => Math.round(c + (target[i] - c) * t));
+  const rgbStr = (rgb) => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+  const lighten = (hex, t) => rgbStr(mix(hexToRgb(hex), [255, 255, 255], t));
+  const darken = (hex, t) => rgbStr(mix(hexToRgb(hex), [0, 0, 0], t));
+
   // Build input rows
   CATEGORIES.forEach((c) => {
     const row = document.createElement("div");
@@ -298,6 +308,52 @@
     const total = Math.max(income, totalExpenses);
     if (total <= 0) return;
 
+    // --- defs: a soft drop shadow (lifts segments off the ring) and a glossy
+    // radial gradient per colour (brighter shine on the inner edge). The band
+    // spans radius [r - stroke/2, r + stroke/2]; the gradient is concentric so
+    // the highlight sits on the inner edge of every segment.
+    const defs = document.createElementNS(SVGNS, "defs");
+
+    const filter = document.createElementNS(SVGNS, "filter");
+    filter.setAttribute("id", "segShadow");
+    filter.setAttribute("x", "-30%");
+    filter.setAttribute("y", "-30%");
+    filter.setAttribute("width", "160%");
+    filter.setAttribute("height", "160%");
+    const ds = document.createElementNS(SVGNS, "feDropShadow");
+    ds.setAttribute("dx", "0");
+    ds.setAttribute("dy", "1.6");
+    ds.setAttribute("stdDeviation", "1.8");
+    ds.setAttribute("flood-color", "#000000");
+    ds.setAttribute("flood-opacity", "0.55");
+    filter.appendChild(ds);
+    defs.appendChild(filter);
+
+    const rOuter = r + stroke / 2;
+    const innerOff = (r - stroke / 2) / rOuter; // band inner edge as gradient offset
+    items.forEach((c) => {
+      const g = document.createElementNS(SVGNS, "radialGradient");
+      g.setAttribute("id", `grad-${c.key}`);
+      g.setAttribute("gradientUnits", "userSpaceOnUse");
+      g.setAttribute("cx", cx);
+      g.setAttribute("cy", cy);
+      g.setAttribute("r", rOuter);
+      const stops = [
+        [innerOff,                       lighten(c.color, 0.55)], // shine
+        [innerOff + (1 - innerOff) * 0.3, lighten(c.color, 0.12)],
+        [innerOff + (1 - innerOff) * 0.62, c.color],
+        [1,                              darken(c.color, 0.22)],  // shaded outer edge
+      ];
+      stops.forEach(([off, col]) => {
+        const s = document.createElementNS(SVGNS, "stop");
+        s.setAttribute("offset", off);
+        s.setAttribute("stop-color", col);
+        g.appendChild(s);
+      });
+      defs.appendChild(g);
+    });
+    donut.appendChild(defs);
+
     // Outer border ring around the whole circle, slightly wider than the
     // colored segments so it reads as a clean bordered band.
     const border = document.createElementNS(SVGNS, "circle");
@@ -329,9 +385,10 @@
       seg.setAttribute("cy", cy);
       seg.setAttribute("r", r);
       seg.setAttribute("fill", "none");
-      seg.setAttribute("stroke", c.color);
+      seg.setAttribute("stroke", `url(#grad-${c.key})`);
       seg.setAttribute("stroke-width", stroke);
       seg.setAttribute("stroke-linecap", "butt"); // square ends, fills the slot
+      seg.setAttribute("filter", "url(#segShadow)"); // lifted off the ring
 
       // Each category is a rectangle filling its slot, with gapDeg between
       // neighbours (gapDeg/2 on each side). Butt caps don't overhang, so the
