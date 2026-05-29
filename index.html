@@ -266,6 +266,34 @@
   .dotmark { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
   .note { background: #1c1407; border: 1px solid #5a3d12; color: #f0b86a; border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 18px; line-height: 1.5; }
 
+  /* ---------- Plan detail ---------- */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  .alloc-legend { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 22px; }
+  .alloc-legend .lr { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+  .alloc-legend .lr .nm { display: flex; align-items: center; gap: 9px; color: var(--text); }
+  .alloc-legend .lr .sw { width: 12px; height: 12px; border-radius: 4px; }
+  .alloc-legend .lr .amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .alloc-legend .lr .pc { color: var(--muted); font-size: 12px; margin-left: 8px; }
+
+  .payoff-order { list-style: none; counter-reset: step; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .payoff-order li { counter-increment: step; position: relative; padding: 14px 14px 14px 54px; border-radius: 12px; background: #0c121d; border: 1px solid var(--border); }
+  .payoff-order li::before { content: counter(step); position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--accent2, #4ea8ff); color: #0b0f17; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .payoff-order li .po-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .payoff-order li .po-name { font-weight: 600; font-size: 15px; }
+  .payoff-order li .po-rate { color: #f0b86a; font-size: 12px; font-weight: 600; }
+  .payoff-order li .po-meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .payoff-order li .po-meta b { color: var(--text); }
+  .payoff-order li.cleared-first { border-color: #3ad07f55; }
+
+  .schedule-list { display: flex; flex-direction: column; gap: 10px; }
+  .sched-item { display: flex; gap: 14px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: #0c121d; border: 1px solid var(--border); font-size: 14px; }
+  .sched-item .badge-m { flex-shrink: 0; background: #1a2230; border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .sched-item .sched-txt { line-height: 1.5; }
+  .sched-item .sched-txt b { color: var(--text); }
+  .sched-item.win { border-color: #3ad07f55; }
+  .sched-item.win .badge-m { color: #3ad07f; }
+  @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+
   @media (max-width: 900px) {
     .plans-grid { grid-template-columns: 1fr; }
     .debt-row { grid-template-columns: 1fr 1fr; }
@@ -320,7 +348,7 @@
         <div class="income-block" style="max-width:280px;">
           <label class="field-label" for="income">Monthly Income</label>
           <div class="money-input income-input">
-            <input id="income" type="number" inputmode="decimal" min="0" placeholder="0" value="6100" />
+            <input id="income" type="number" inputmode="decimal" min="0" placeholder="6100" value="" />
           </div>
         </div>
 
@@ -406,6 +434,54 @@
       </div>
     </section>
 
+    <!-- ============ SCREEN 3: PLAN DETAIL ============ -->
+    <section id="screen-detail" class="screen">
+      <div class="actionbar" style="margin-top:0;margin-bottom:18px;">
+        <button class="btn btn-ghost back-to-results" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to plans
+        </button>
+        <div class="spacer"></div>
+        <button id="exportDetailBtn" class="btn btn-ghost" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export This Plan
+        </button>
+      </div>
+
+      <div class="screen-head" style="text-align:center;">
+        <h2 id="detailTitle">Your Plan</h2>
+        <p id="detailSub">Here's exactly where your money goes and which debts to clear first.</p>
+      </div>
+
+      <div class="detail-grid">
+        <!-- Allocation chart -->
+        <section class="card chart-card" style="min-height:auto;">
+          <h3 style="margin:0 0 4px;align-self:flex-start;">Monthly money allocation</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0 0 16px;align-self:flex-start;">How your <span id="allocIncomeLbl"></span> income is split each month while clearing debt.</p>
+          <div class="donut-wrap" style="width:360px;">
+            <svg id="allocDonut" viewBox="0 0 200 200"></svg>
+            <div class="center-text">
+              <div class="amount" id="alloc-center" style="font-size:42px;"></div>
+              <div class="label" style="font-size:18px;">Monthly income</div>
+            </div>
+          </div>
+          <div id="allocLegend" class="alloc-legend"></div>
+        </section>
+
+        <!-- Payoff order -->
+        <section class="card">
+          <h3 style="margin:0 0 4px;">Your payoff roadmap</h3>
+          <p style="color:var(--muted);font-size:13px;margin:0 0 16px;">Pay every minimum, then throw spare cash at the highest-interest debt first.</p>
+          <ol id="payoffOrder" class="payoff-order"></ol>
+        </section>
+      </div>
+
+      <section class="card" id="scheduleCard" style="margin-top:24px;">
+        <h3 style="margin:0 0 14px;">Month-by-month milestones</h3>
+        <div id="scheduleList" class="schedule-list"></div>
+      </section>
+    </section>
+
   </div>
 
 <script>
@@ -441,7 +517,7 @@
   const lighten = (hex, t) => rgbStr(mix(hexToRgb(hex), [255, 255, 255], t));
   const darken = (hex, t) => rgbStr(mix(hexToRgb(hex), [0, 0, 0], t));
 
-  // Build input rows
+  // Build input rows (blank by default; the example figure is just a placeholder)
   CATEGORIES.forEach((c) => {
     const row = document.createElement("div");
     row.className = "row";
@@ -449,7 +525,7 @@
       <span class="dot" style="background:${c.color}"></span>
       <span class="name">${c.name}</span>
       <span class="money-input">
-        <input type="number" inputmode="decimal" min="0" data-key="${c.key}" value="${c.value}" placeholder="0" />
+        <input type="number" inputmode="decimal" min="0" data-key="${c.key}" value="" placeholder="${c.value}" />
       </span>`;
     rowsEl.appendChild(row);
   });
@@ -484,27 +560,29 @@
     drawDonut(items, income, totalExpenses);
   }
 
+  // Backwards-compatible wrapper for the budget chart.
   function drawDonut(items, income, totalExpenses) {
-    while (donut.firstChild) donut.removeChild(donut.firstChild);
+    drawDonutInto(donut, items, Math.max(income, totalExpenses), "b");
+  }
+
+  // Generic donut renderer. `svgEl` is the target <svg>, `items` is an array of
+  // { key, color, value, name }, `total` is the value the full ring represents
+  // (undrawn remainder shows as the dark track), `idPrefix` keeps gradient/
+  // filter IDs unique between charts on the page.
+  function drawDonutInto(svgEl, items, total, idPrefix) {
+    while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
 
     const cx = 100, cy = 100, r = 78, stroke = 18;
     const circ = 2 * Math.PI * r;
     const gapDeg = 3.6; // visible gap between segments
 
-    // The full ring represents income. Expenses fill it proportionally and
-    // any leftover is left undrawn. If expenses exceed income, the ring fills
-    // completely (overspending).
-    const total = Math.max(income, totalExpenses);
-    if (total <= 0) return;
+    if (total <= 0 || items.length === 0) return;
 
-    // --- defs: a soft drop shadow (lifts segments off the ring) and a glossy
-    // radial gradient per colour (brighter shine on the inner edge). The band
-    // spans radius [r - stroke/2, r + stroke/2]; the gradient is concentric so
-    // the highlight sits on the inner edge of every segment.
+    const shadowId = `segShadow-${idPrefix}`;
     const defs = document.createElementNS(SVGNS, "defs");
 
     const filter = document.createElementNS(SVGNS, "filter");
-    filter.setAttribute("id", "segShadow");
+    filter.setAttribute("id", shadowId);
     filter.setAttribute("x", "-30%");
     filter.setAttribute("y", "-30%");
     filter.setAttribute("width", "160%");
@@ -520,11 +598,12 @@
     filter.appendChild(ds);
     defs.appendChild(filter);
 
+    const gradId = (c) => `grad-${idPrefix}-${c.key}`;
     const rOuter = r + stroke / 2;
     const innerOff = (r - stroke / 2) / rOuter; // band inner edge as gradient offset
     items.forEach((c) => {
       const g = document.createElementNS(SVGNS, "radialGradient");
-      g.setAttribute("id", `grad-${c.key}`);
+      g.setAttribute("id", gradId(c));
       g.setAttribute("gradientUnits", "userSpaceOnUse");
       g.setAttribute("cx", cx);
       g.setAttribute("cy", cy);
@@ -544,7 +623,7 @@
       });
       defs.appendChild(g);
     });
-    donut.appendChild(defs);
+    svgEl.appendChild(defs);
 
     // Outer border ring around the whole circle, slightly wider than the
     // colored segments so it reads as a clean bordered band.
@@ -555,7 +634,7 @@
     border.setAttribute("fill", "none");
     border.setAttribute("stroke", "#2c3547");
     border.setAttribute("stroke-width", stroke + 8);
-    donut.appendChild(border);
+    svgEl.appendChild(border);
 
     // Inner dark track (the empty/leftover portion shows as this).
     const track = document.createElementNS(SVGNS, "circle");
@@ -565,7 +644,7 @@
     track.setAttribute("fill", "none");
     track.setAttribute("stroke", "#1b2230");
     track.setAttribute("stroke-width", stroke);
-    donut.appendChild(track);
+    svgEl.appendChild(track);
 
     // Each category is drawn as an annular-sector tile, then given a thin
     // same-colour outline (linejoin/linecap round) for a slight corner round.
@@ -629,18 +708,18 @@
 
       const seg = document.createElementNS(SVGNS, "path");
       seg.setAttribute("d", d);
-      seg.setAttribute("fill", `url(#grad-${c.key})`);
-      seg.setAttribute("stroke", `url(#grad-${c.key})`);
+      seg.setAttribute("fill", `url(#${gradId(c)})`);
+      seg.setAttribute("stroke", `url(#${gradId(c)})`);
       seg.setAttribute("stroke-width", cornerStroke);
       seg.setAttribute("stroke-linejoin", "round");
       seg.setAttribute("stroke-linecap", "round");
-      seg.setAttribute("filter", "url(#segShadow)"); // lifted off the ring
+      seg.setAttribute("filter", `url(#${shadowId})`); // lifted off the ring
 
       const title = document.createElementNS(SVGNS, "title");
       title.textContent = `${c.name}: ${fmt(c.value)} (${(frac * 100).toFixed(1)}%)`;
       seg.appendChild(title);
 
-      donut.appendChild(seg);
+      svgEl.appendChild(seg);
       startDeg += slot;
     });
   }
@@ -675,29 +754,29 @@
     { name: "Student Loan", bal: 15000, min: 180, rate: 6.1 },
   ];
 
-  function addDebtRow(preset) {
+  function addDebtRow() {
     if (debtRowsEl.children.length >= MAX_DEBTS) return;
     const i = debtRowsEl.children.length;
-    const ph = DEBT_PLACEHOLDERS[i] || { name: "", bal: "", min: "", rate: "" };
-    const p = preset || (i === 0 ? ph : { name: "", bal: "", min: "", rate: "" });
+    // Placeholders show an example; fields start blank for the user to fill in.
+    const ph = DEBT_PLACEHOLDERS[i % DEBT_PLACEHOLDERS.length];
     const row = document.createElement("div");
     row.className = "debt-row";
     row.innerHTML = `
       <div class="fld">
         <label>Debt name</label>
-        <input class="d-name" type="text" placeholder="e.g. ${ph.name || "Credit Card"}" value="${p.name ?? ""}" />
+        <input class="d-name" type="text" placeholder="e.g. ${ph.name}" value="" />
       </div>
       <div class="fld">
         <label>Total balance</label>
-        <span class="money"><input class="d-bal" type="number" inputmode="decimal" min="0" placeholder="${ph.bal || 0}" value="${p.bal ?? ""}" /></span>
+        <span class="money"><input class="d-bal" type="number" inputmode="decimal" min="0" placeholder="${ph.bal}" value="" /></span>
       </div>
       <div class="fld">
         <label>Min. monthly payment</label>
-        <span class="money"><input class="d-min" type="number" inputmode="decimal" min="0" placeholder="${ph.min || 0}" value="${p.min ?? ""}" /></span>
+        <span class="money"><input class="d-min" type="number" inputmode="decimal" min="0" placeholder="${ph.min}" value="" /></span>
       </div>
       <div class="fld">
         <label>Interest rate</label>
-        <span class="pct"><input class="d-rate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="${ph.rate || 0}" value="${p.rate ?? ""}" /></span>
+        <span class="pct"><input class="d-rate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="${ph.rate}" value="" /></span>
       </div>
       <button class="del-debt" type="button" title="Remove debt" aria-label="Remove debt">&times;</button>`;
     row.querySelector(".del-debt").addEventListener("click", () => {
@@ -894,7 +973,7 @@
       card.querySelector(".pick-btn").addEventListener("click", () => {
         document.querySelectorAll(".plan").forEach((c) => c.classList.remove("selected"));
         card.classList.add("selected");
-        card.querySelector(".pick-btn").textContent = "✓ Plan Selected";
+        openPlanDetail(p.key);
       });
       card.querySelector(".compare-link").addEventListener("click", () => {
         document.getElementById("compareCard").scrollIntoView({ behavior: "smooth", block: "center" });
@@ -922,6 +1001,151 @@
       noteEl.innerHTML += `<div class="note" style="margin-top:10px;">*Some plans never fully clear the debt because the payment can't keep up with interest. Increasing your monthly payment fixes this.</div>`;
     }
   }
+
+  // ===========================================================================
+  // PLAN DETAIL — allocation + ordered payoff roadmap
+  // ===========================================================================
+
+  // Detailed avalanche simulation that records the order debts are cleared and
+  // the month each one disappears. `extra` is the spare cash beyond minimums.
+  function simulateDetailed(debts, extra) {
+    let bal = debts.map((d) => d.balance);
+    const rate = debts.map((d) => d.rate / 100 / 12);
+    const min = debts.map((d) => d.min);
+    const order = debts.map((_, i) => i).sort((a, b) => rate[b] - rate[a]);
+
+    const clearedMonth = debts.map(() => null);
+    let months = 0, totalInterest = 0;
+    const CAP = 1200;
+
+    while (bal.some((b) => b > 0.005)) {
+      if (months >= CAP) break;
+      months++;
+      for (let i = 0; i < bal.length; i++) {
+        if (bal[i] > 0) { const it = bal[i] * rate[i]; bal[i] += it; totalInterest += it; }
+      }
+      let pool = extra;
+      for (let i = 0; i < bal.length; i++) {
+        if (bal[i] <= 0) continue;
+        const pay = Math.min(min[i], bal[i]);
+        bal[i] -= pay; pool += (min[i] - pay);
+      }
+      for (const i of order) {
+        if (pool <= 0) break;
+        if (bal[i] <= 0) continue;
+        const pay = Math.min(pool, bal[i]);
+        bal[i] -= pay; pool -= pay;
+      }
+      for (let i = 0; i < bal.length; i++) {
+        if (bal[i] <= 0.005 && clearedMonth[i] === null) clearedMonth[i] = months;
+      }
+      if (months > 1 && extra <= 0) {
+        const tMin = min.reduce((s, m, i) => s + (bal[i] > 0 ? m : 0), 0);
+        const tInt = bal.reduce((s, b, i) => s + (b > 0 ? b * rate[i] : 0), 0);
+        if (tMin <= tInt + 0.005 && bal.some((b) => b > 0.005)) { months = Infinity; break; }
+      }
+    }
+    return { months, totalInterest, clearedMonth, order };
+  }
+
+  let detailKey = null; // currently-open plan, for export
+
+  function openPlanDetail(key) {
+    detailKey = key;
+    const plan = plansComputed.find((x) => x.def.key === key);
+    if (!plan) return;
+    const debts = getDebts().filter((d) => d.balance > 0);
+    const income = Math.max(0, parseFloat(incomeEl.value) || 0);
+    const vals = getValues();
+
+    // Non-debt living expenses (everything except the budget "Debt" line).
+    let living = 0;
+    CATEGORIES.forEach((c) => { if (c.key !== "debt") living += vals[c.key] || 0; });
+
+    const toDebt = Math.min(plan.monthly, Math.max(0, income - living)); // can't exceed what's available
+    const leftover = Math.max(0, income - living - toDebt); // free / savings money
+
+    // --- Allocation chart: Living expenses + Debt payments + Free/Savings.
+    const allocItems = [
+      { key: "living", name: "Living expenses", color: "#4cb8f0", value: living },
+      { key: "debtpay", name: "Debt payments",  color: "#f0556f", value: toDebt },
+      { key: "free",    name: "Free / savings", color: "#3ad07f", value: leftover },
+    ].filter((a) => a.value > 0);
+
+    const allocSvg = document.getElementById("allocDonut");
+    drawDonutInto(allocSvg, allocItems, income, "a");
+    document.getElementById("alloc-center").textContent = fmt(income);
+    document.getElementById("allocIncomeLbl").textContent = fmt(income);
+
+    const legend = document.getElementById("allocLegend");
+    legend.innerHTML = allocItems.map((a) =>
+      `<div class="lr"><span class="nm"><span class="sw" style="background:${a.color}"></span>${a.name}</span>` +
+      `<span><span class="amt">${fmt(a.value)}</span><span class="pc">${income > 0 ? Math.round(a.value / income * 100) : 0}%</span></span></div>`
+    ).join("");
+
+    // --- Payoff order (avalanche) + per-debt clear month.
+    const sim = simulateDetailed(debts, plan.extra);
+    const orderEl = document.getElementById("payoffOrder");
+    const colorBy = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
+    orderEl.style.setProperty("--accent2", colorBy[plan.def.cls]);
+    orderEl.innerHTML = sim.order.map((i, idx) => {
+      const d = debts[i];
+      const when = sim.clearedMonth[i];
+      const focus = idx === 0 ? "<b>Attack this first</b> with all your spare cash." : `Keep paying the ${fmt(d.min)} minimum until it's your turn.`;
+      const cleared = when ? `Cleared by <b>month ${when}</b> (${monthsToStr(when)}).` : `Not cleared within the projection.`;
+      return `<li class="${idx === 0 ? "cleared-first" : ""}">
+        <div class="po-top"><span class="po-name">${xmlEsc(d.name)}</span><span class="po-rate">${d.rate}% APR</span></div>
+        <div class="po-meta">${fmt(d.balance)} balance · ${focus} ${cleared}</div>
+      </li>`;
+    }).join("");
+
+    // --- Month-by-month milestones.
+    renderSchedule(plan, debts, sim, toDebt);
+
+    // titles
+    document.getElementById("detailTitle").textContent = plan.def.title;
+    document.getElementById("detailSub").textContent =
+      `Debt-free in ${monthsToStr(plan.sim.months)} · ${fmt(toDebt)}/mo toward debt`;
+
+    showScreen("screen-detail");
+  }
+
+  function renderSchedule(plan, debts, sim, toDebt) {
+    const list = document.getElementById("scheduleList");
+    const items = [];
+
+    // Month 1: pay all minimums, throw the rest at the highest-interest debt.
+    const first = debts[sim.order[0]];
+    items.push({ m: "Month 1", win: false, txt:
+      `Pay every minimum payment (<b>${fmt(debts.reduce((s, d) => s + d.min, 0))}</b> total), then put your remaining <b>${fmt(plan.extra)}</b> straight onto <b>${xmlEsc(first.name)}</b> — your highest-interest debt at ${first.rate}%.` });
+
+    // A milestone each time a debt is cleared (in clear order).
+    const clears = sim.order
+      .map((i) => ({ name: debts[i].name, month: sim.clearedMonth[i] }))
+      .filter((c) => c.month)
+      .sort((a, b) => a.month - b.month);
+
+    clears.forEach((c, idx) => {
+      const next = clears[idx + 1];
+      const rolls = next
+        ? ` Roll its payment onto <b>${xmlEsc(next.name)}</b> — the snowball grows.`
+        : ` That was your last debt!`;
+      items.push({ m: `Month ${c.month}`, win: true, txt:
+        `🎉 <b>${xmlEsc(c.name)}</b> is fully paid off.${rolls}` });
+    });
+
+    if (isFinite(plan.sim.months)) {
+      items.push({ m: monthsToStr(plan.sim.months), win: true, txt:
+        `<b>You're completely debt-free.</b> Redirect the full <b>${fmt(toDebt)}</b>/mo into a 50/30/20 lifestyle — savings, investments and guilt-free spending.` });
+    }
+
+    list.innerHTML = items.map((it) =>
+      `<div class="sched-item ${it.win ? "win" : ""}"><span class="badge-m">${it.m}</span><span class="sched-txt">${it.txt}</span></div>`
+    ).join("");
+  }
+
+  document.querySelectorAll(".back-to-results").forEach((b) =>
+    b.addEventListener("click", () => showScreen("screen-results")));
 
   // --- Export to PNG ---------------------------------------------------------
   const xmlEsc = (s) => String(s)
@@ -1107,6 +1331,94 @@
     if (!plansComputed.length) return;
     const { svg, W, H } = buildPlanSvg();
     rasterize(svg, W, H, `debt-plans-${new Date().toISOString().slice(0, 10)}.png`, this);
+  });
+
+  // --- Export the open plan detail (allocation + roadmap) -------------------
+  function buildDetailSvg() {
+    const plan = plansComputed.find((x) => x.def.key === detailKey);
+    if (!plan) return null;
+    const W = 1180, H = 760;
+    const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const colorBy = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
+    const col = colorBy[plan.def.cls];
+    const income = Math.max(0, parseFloat(incomeEl.value) || 0);
+
+    // allocation donut clone (already rendered on screen)
+    const allocClone = document.getElementById("allocDonut").cloneNode(true);
+    allocClone.removeAttribute("id");
+    allocClone.setAttribute("x", 60); allocClone.setAttribute("y", 170);
+    allocClone.setAttribute("width", 300); allocClone.setAttribute("height", 300);
+    const allocMarkup = new XMLSerializer().serializeToString(allocClone);
+    const acx = 60 + 150, acy = 170 + 150;
+
+    // allocation legend rows
+    const legendRows = [...document.querySelectorAll("#allocLegend .lr")].map((lr, i) => {
+      const nm = lr.querySelector(".nm").textContent.trim();
+      const amt = lr.querySelector(".amt").textContent;
+      const sw = lr.querySelector(".sw").style.background;
+      const yy = 500 + i * 30;
+      return `<rect x="60" y="${yy - 12}" width="14" height="14" rx="3" fill="${sw}"/>` +
+        `<text x="84" y="${yy}" font-size="16" fill="#e8eef7">${xmlEsc(nm)}</text>` +
+        `<text x="360" y="${yy}" font-size="16" font-weight="600" fill="#f4efe6" text-anchor="end">${xmlEsc(amt)}</text>`;
+    }).join("");
+
+    // payoff order on the right
+    const px = 470, pw = W - px - 48;
+    let py = 200;
+    let order = `<text x="${px}" y="170" font-size="18" font-weight="700" fill="#f4efe6">Your payoff roadmap</text>`;
+    [...document.querySelectorAll("#payoffOrder li")].forEach((li, idx) => {
+      const name = li.querySelector(".po-name").textContent;
+      const rate = li.querySelector(".po-rate").textContent;
+      const meta = li.querySelector(".po-meta").textContent.replace(/\s+/g, " ").trim();
+      const rh = 78;
+      order +=
+        `<rect x="${px}" y="${py}" width="${pw}" height="${rh - 12}" rx="10" fill="#0c121d" stroke="#232c3d"/>` +
+        `<circle cx="${px + 26}" cy="${py + (rh - 12) / 2}" r="14" fill="${col}"/>` +
+        `<text x="${px + 26}" y="${py + (rh - 12) / 2 + 5}" font-size="14" font-weight="800" fill="#0b0f17" text-anchor="middle">${idx + 1}</text>` +
+        `<text x="${px + 52}" y="${py + 26}" font-size="15" font-weight="600" fill="#f4efe6">${xmlEsc(name)}</text>` +
+        `<text x="${px + pw - 16}" y="${py + 26}" font-size="13" font-weight="600" fill="#f0b86a" text-anchor="end">${xmlEsc(rate)}</text>` +
+        wrapText(meta, px + 52, py + 48, pw - 68, 13, "#8b97a8");
+      py += rh;
+    });
+
+    const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${FONT}">
+  <rect width="${W}" height="${H}" fill="#0b0f17"/>
+  <rect x="16" y="16" width="${W - 32}" height="${H - 32}" rx="24" fill="#121826" stroke="#232c3d"/>
+  <rect x="48" y="50" width="6" height="34" rx="3" fill="${col}"/>
+  <text x="66" y="68" font-size="26" font-weight="700" fill="#f4efe6">${xmlEsc(plan.def.title)}</text>
+  <text x="66" y="92" font-size="14" fill="#8b97a8">Debt-free in ${xmlEsc(monthsToStr(plan.sim.months))} · ${dateStr}</text>
+  <line x1="48" y1="112" x2="${W - 48}" y2="112" stroke="#232c3d"/>
+  <text x="60" y="150" font-size="18" font-weight="700" fill="#f4efe6">Monthly money allocation</text>
+  ${allocMarkup}
+  <text x="${acx}" y="${acy + 2}" text-anchor="middle" font-size="30" font-weight="800" fill="#f4efe6">${fmt(income)}</text>
+  <text x="${acx}" y="${acy + 24}" text-anchor="middle" font-size="13" fill="#8b97a8">income</text>
+  ${legendRows}
+  ${order}
+</svg>`;
+    return { svg, W, H };
+  }
+
+  // crude word-wrap into <text>/<tspan> lines for the export
+  function wrapText(text, x, y, maxW, size, fill) {
+    const words = text.split(" ");
+    const perLine = Math.max(8, Math.floor(maxW / (size * 0.52)));
+    const lines = [];
+    let line = "";
+    words.forEach((w) => {
+      if ((line + " " + w).trim().length > perLine) { lines.push(line.trim()); line = w; }
+      else line += " " + w;
+    });
+    if (line.trim()) lines.push(line.trim());
+    return lines.slice(0, 2).map((ln, i) =>
+      `<text x="${x}" y="${y + i * 16}" font-size="${size}" fill="${fill}">${xmlEsc(ln)}</text>`).join("");
+  }
+
+  document.getElementById("exportDetailBtn").addEventListener("click", function () {
+    const out = buildDetailSvg();
+    if (!out) return;
+    rasterize(out.svg, out.W, out.H, `my-payoff-plan-${new Date().toISOString().slice(0, 10)}.png`, this);
   });
 </script>
 </body>
