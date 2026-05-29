@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Budget Calculator</title>
+<title>Budget &amp; Debt Freedom Calculator</title>
 <style>
   :root {
     --bg: #0b0f17;
@@ -181,6 +181,91 @@
 
   .legend-pct { color: var(--muted); font-size: 12px; margin-left: 6px; }
 
+  /* ---------- Multi-screen flow ---------- */
+  .screen { display: none; }
+  .screen.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .actionbar {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 26px; flex-wrap: wrap;
+  }
+  .actionbar .spacer { flex: 1; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: none; border-radius: 12px; padding: 13px 22px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: filter .15s, transform .05s, opacity .15s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn-primary { background: linear-gradient(180deg, #3b86ff, #246cf0); color: #fff; box-shadow: 0 6px 18px rgba(36,108,240,.35); }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn-ghost { background: #1a2230; color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover:not(:disabled) { filter: brightness(1.18); }
+  .btn-link { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; margin-top: 10px; text-decoration: underline; width: 100%; }
+  .btn-link:hover { color: var(--text); }
+
+  .screen-head { margin-bottom: 22px; }
+  .screen-head h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  .screen-head p { color: var(--muted); margin: 0; font-size: 15px; }
+
+  /* ---------- Debts ---------- */
+  .debts-card { max-width: 940px; margin: 0 auto; }
+  .debt-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr .85fr 44px; gap: 12px; align-items: end; margin-bottom: 14px; }
+  .debt-row .fld label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+  .debt-row input { width: 100%; background: #0c121d; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 12px; font-size: 15px; outline: none; transition: border-color .15s; }
+  .debt-row input:focus { border-color: var(--accent); }
+  .debt-row .money, .debt-row .pct { position: relative; }
+  .debt-row .money::before { content: "£"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+  .debt-row .money input { padding-left: 26px; }
+  .debt-row .pct::after { content: "%"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+  .debt-row .pct input { padding-right: 26px; }
+  .del-debt { background: #1a2230; border: 1px solid var(--border); color: #f87171; border-radius: 10px; height: 44px; cursor: pointer; font-size: 20px; line-height: 1; }
+  .del-debt:hover { filter: brightness(1.25); }
+  .debt-total { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .debt-total .lab { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+  .debt-total .val { font-size: 22px; font-weight: 700; }
+  #addDebt { margin-top: 4px; }
+
+  /* ---------- Plans ---------- */
+  .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .plan { border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--panel), var(--panel-2)); padding: 22px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  .plan::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--accent2); }
+  .plan.green { --accent2: #3ad07f; }
+  .plan.orange { --accent2: #f5953a; }
+  .plan.red { --accent2: #f0556f; }
+  .plan .badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent2); margin-bottom: 8px; }
+  .plan h3 { margin: 0 0 6px; font-size: 19px; }
+  .plan .desc { color: var(--muted); font-size: 13px; line-height: 1.5; min-height: 72px; }
+  .plan .hero { margin: 14px 0; padding: 14px; border-radius: 12px; background: #0c121d; text-align: center; }
+  .plan .hero .t { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .plan .hero .v { font-size: 24px; font-weight: 800; color: var(--accent2); margin-top: 3px; }
+  .plan .metrics { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
+  .plan .metric { display: flex; justify-content: space-between; font-size: 14px; }
+  .plan .metric .k { color: var(--muted); }
+  .plan .metric .v { font-weight: 600; }
+  .plan .after { font-size: 12px; color: var(--muted); line-height: 1.5; border-top: 1px dashed var(--border); padding-top: 12px; margin-bottom: 14px; }
+  .plan .after b { color: var(--text); }
+  .plan .pick-wrap { margin-top: auto; }
+  .plan.selected { box-shadow: 0 0 0 2px var(--accent2); }
+
+  .compare { margin-top: 30px; max-width: 860px; margin-left: auto; margin-right: auto; }
+  .compare h3 { font-size: 18px; margin: 0 0 14px; }
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .cmp-table th, .cmp-table td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .cmp-table th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .cmp-table td.num, .cmp-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .cmp-table tr.best td { color: #3ad07f; }
+  .dotmark { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
+  .note { background: #1c1407; border: 1px solid #5a3d12; color: #f0b86a; border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 18px; line-height: 1.5; }
+
+  @media (max-width: 900px) {
+    .plans-grid { grid-template-columns: 1fr; }
+    .debt-row { grid-template-columns: 1fr 1fr; }
+    .debt-row .del-debt { grid-column: span 2; }
+  }
   @media (max-width: 880px) {
     .layout { grid-template-columns: 1fr; }
     .donut-wrap { width: 320px; }
@@ -190,61 +275,149 @@
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <div>
-        <h1>Budget <span>Calculator</span></h1>
-        <div class="tagline">Enter your income and expenses to see where your money goes.</div>
+
+    <!-- ============ SCREEN 1: BUDGET ============ -->
+    <section id="screen-budget" class="screen active">
+      <header>
+        <div>
+          <h1>Budget <span>Calculator</span></h1>
+          <div class="tagline">Enter your income and expenses to see where your money goes.</div>
+        </div>
+        <button id="exportBtn" class="btn-export" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span id="exportLabel">Export</span>
+        </button>
+      </header>
+
+      <div class="layout">
+        <!-- Inputs -->
+        <section class="card">
+          <div class="income-block">
+            <label class="field-label" for="income">Monthly Income</label>
+            <div class="money-input income-input">
+              <input id="income" type="number" inputmode="decimal" min="0" placeholder="0" value="6100" />
+            </div>
+          </div>
+
+          <label class="field-label">Expenses</label>
+          <div class="rows" id="rows"></div>
+        </section>
+
+        <!-- Chart -->
+        <section class="card chart-card">
+          <div class="donut-wrap">
+            <svg id="donut" viewBox="0 0 200 200"></svg>
+            <div class="center-text">
+              <div class="amount" id="center-amount">$0</div>
+              <div class="label">Monthly Income</div>
+            </div>
+          </div>
+
+          <div class="summary">
+            <div class="stat">
+              <div class="v" id="sum-income">$0</div>
+              <div class="k">Income</div>
+            </div>
+            <div class="stat">
+              <div class="v" id="sum-expenses">$0</div>
+              <div class="k">Expenses</div>
+            </div>
+            <div class="stat leftover" id="leftover-stat">
+              <div class="v" id="sum-leftover">$0</div>
+              <div class="k">Leftover</div>
+            </div>
+          </div>
+        </section>
       </div>
-      <button id="exportBtn" class="btn-export" type="button">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <span id="exportLabel">Export</span>
-      </button>
-    </header>
 
-    <div class="layout">
-      <!-- Inputs -->
-      <section class="card">
-        <div class="income-block">
-          <label class="field-label" for="income">Monthly Income</label>
-          <div class="money-input income-input">
-            <input id="income" type="number" inputmode="decimal" min="0" placeholder="0" value="6100" />
-          </div>
+      <div class="actionbar">
+        <div class="spacer"></div>
+        <button id="toDebts" class="btn btn-primary" type="button">
+          Next: Debt Payoff Plans
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN 2: DEBTS ============ -->
+    <section id="screen-debts" class="screen">
+      <div class="actionbar" style="margin-top:0;margin-bottom:18px;">
+        <button class="btn btn-ghost back-to-budget" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+      </div>
+
+      <section class="card debts-card">
+        <div class="screen-head">
+          <h2>Tell us about your debts</h2>
+          <p>Add each debt to see personalised payoff strategies.</p>
         </div>
 
-        <label class="field-label">Expenses</label>
-        <div class="rows" id="rows"></div>
-      </section>
+        <div id="debtRows"></div>
 
-      <!-- Chart -->
-      <section class="card chart-card">
-        <div class="donut-wrap">
-          <svg id="donut" viewBox="0 0 200 200"></svg>
-          <div class="center-text">
-            <div class="amount" id="center-amount">$0</div>
-            <div class="label">Monthly Income</div>
-          </div>
+        <button id="addDebt" class="btn btn-ghost" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Debt
+        </button>
+
+        <div class="debt-total">
+          <span class="lab">Total minimum monthly payments</span>
+          <span class="val" id="debtMinTotal">£0</span>
         </div>
 
-        <div class="summary">
-          <div class="stat">
-            <div class="v" id="sum-income">$0</div>
-            <div class="k">Income</div>
-          </div>
-          <div class="stat">
-            <div class="v" id="sum-expenses">$0</div>
-            <div class="k">Expenses</div>
-          </div>
-          <div class="stat leftover" id="leftover-stat">
-            <div class="v" id="sum-leftover">$0</div>
-            <div class="k">Leftover</div>
-          </div>
+        <div class="actionbar">
+          <div class="spacer"></div>
+          <button id="toPlans" class="btn btn-primary" type="button" disabled>
+            See My Payoff Plans
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </div>
       </section>
-    </div>
+    </section>
+
+    <!-- ============ SCREEN 3: PLANS ============ -->
+    <section id="screen-plans" class="screen">
+      <div class="actionbar" style="margin-top:0;margin-bottom:18px;">
+        <button class="btn btn-ghost back-to-debts" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <div class="spacer"></div>
+        <button id="exportPlanBtn" class="btn btn-ghost" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Plan
+        </button>
+      </div>
+
+      <div class="screen-head" style="text-align:center;">
+        <h2>Choose Your Debt Freedom Strategy</h2>
+        <p>Three ways to clear your debt — pick the pace that fits your life.</p>
+      </div>
+
+      <div id="planNote"></div>
+      <div class="plans-grid" id="plansGrid"></div>
+
+      <div class="compare card" id="compareCard">
+        <h3>Compare all plans</h3>
+        <table class="cmp-table">
+          <thead>
+            <tr>
+              <th>Strategy</th>
+              <th class="num">Monthly to debt</th>
+              <th class="num">Debt-free in</th>
+              <th class="num">Total interest</th>
+            </tr>
+          </thead>
+          <tbody id="compareBody"></tbody>
+        </table>
+      </div>
+    </section>
+
   </div>
 
 <script>
@@ -489,6 +662,278 @@
   rowsEl.addEventListener("input", render);
   render();
 
+  // ===========================================================================
+  // SCREEN NAVIGATION
+  // ===========================================================================
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  document.getElementById("toDebts").addEventListener("click", () => {
+    if (debtRowsEl.children.length === 0) addDebtRow();
+    showScreen("screen-debts");
+  });
+  document.querySelectorAll(".back-to-budget").forEach((b) =>
+    b.addEventListener("click", () => showScreen("screen-budget")));
+  document.querySelectorAll(".back-to-debts").forEach((b) =>
+    b.addEventListener("click", () => showScreen("screen-debts")));
+
+  // ===========================================================================
+  // SCREEN 2 — DEBTS
+  // ===========================================================================
+  const debtRowsEl = document.getElementById("debtRows");
+  const debtMinTotalEl = document.getElementById("debtMinTotal");
+  const toPlansBtn = document.getElementById("toPlans");
+  const MAX_DEBTS = 8;
+
+  const DEBT_PLACEHOLDERS = [
+    { name: "Credit Card",  bal: 4500, min: 120, rate: 22.9 },
+    { name: "Car Loan",     bal: 8200, min: 210, rate: 7.4 },
+    { name: "Student Loan", bal: 15000, min: 180, rate: 6.1 },
+  ];
+
+  function addDebtRow(preset) {
+    if (debtRowsEl.children.length >= MAX_DEBTS) return;
+    const i = debtRowsEl.children.length;
+    const ph = DEBT_PLACEHOLDERS[i] || { name: "", bal: "", min: "", rate: "" };
+    const p = preset || (i === 0 ? ph : { name: "", bal: "", min: "", rate: "" });
+    const row = document.createElement("div");
+    row.className = "debt-row";
+    row.innerHTML = `
+      <div class="fld">
+        <label>Debt name</label>
+        <input class="d-name" type="text" placeholder="e.g. ${ph.name || "Credit Card"}" value="${p.name ?? ""}" />
+      </div>
+      <div class="fld">
+        <label>Total balance</label>
+        <span class="money"><input class="d-bal" type="number" inputmode="decimal" min="0" placeholder="${ph.bal || 0}" value="${p.bal ?? ""}" /></span>
+      </div>
+      <div class="fld">
+        <label>Min. monthly payment</label>
+        <span class="money"><input class="d-min" type="number" inputmode="decimal" min="0" placeholder="${ph.min || 0}" value="${p.min ?? ""}" /></span>
+      </div>
+      <div class="fld">
+        <label>Interest rate</label>
+        <span class="pct"><input class="d-rate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="${ph.rate || 0}" value="${p.rate ?? ""}" /></span>
+      </div>
+      <button class="del-debt" type="button" title="Remove debt" aria-label="Remove debt">&times;</button>`;
+    row.querySelector(".del-debt").addEventListener("click", () => {
+      row.remove();
+      refreshDebts();
+    });
+    debtRowsEl.appendChild(row);
+    refreshDebts();
+  }
+
+  function getDebts() {
+    return [...debtRowsEl.querySelectorAll(".debt-row")].map((row) => ({
+      name: row.querySelector(".d-name").value.trim() || "Debt",
+      balance: Math.max(0, parseFloat(row.querySelector(".d-bal").value) || 0),
+      min: Math.max(0, parseFloat(row.querySelector(".d-min").value) || 0),
+      rate: Math.max(0, parseFloat(row.querySelector(".d-rate").value) || 0),
+    }));
+  }
+
+  function refreshDebts() {
+    const debts = getDebts();
+    const valid = debts.filter((d) => d.balance > 0);
+    const minTotal = valid.reduce((s, d) => s + d.min, 0);
+    debtMinTotalEl.textContent = fmt(minTotal);
+    toPlansBtn.disabled = valid.length === 0;
+    document.getElementById("addDebt").disabled = debtRowsEl.children.length >= MAX_DEBTS;
+  }
+
+  document.getElementById("addDebt").addEventListener("click", () => addDebtRow());
+  debtRowsEl.addEventListener("input", refreshDebts);
+  toPlansBtn.addEventListener("click", () => { buildPlans(); showScreen("screen-plans"); });
+
+  // ===========================================================================
+  // PAYOFF MATH
+  // ===========================================================================
+
+  // Money available to service debt = income minus every expense EXCEPT the
+  // budget's own "Debt" line (so we don't double-count it against real debts).
+  function availableForDebt() {
+    const income = Math.max(0, parseFloat(incomeEl.value) || 0);
+    const vals = getValues();
+    let nonDebtExpenses = 0;
+    CATEGORIES.forEach((c) => { if (c.key !== "debt") nonDebtExpenses += vals[c.key] || 0; });
+    return Math.max(0, income - nonDebtExpenses);
+  }
+
+  // Simulate paying off debts month-by-month using the avalanche order
+  // (highest interest first). `extra` is paid on top of all minimums and is
+  // funnelled to the highest-rate debt; freed-up minimums roll over too.
+  // Returns { months, totalInterest, impossible }.
+  function simulate(debts, extra) {
+    let bal = debts.map((d) => d.balance);
+    const rate = debts.map((d) => d.rate / 100 / 12);
+    const min = debts.map((d) => d.min);
+    const order = debts.map((_, i) => i).sort((a, b) => rate[b] - rate[a]);
+
+    let months = 0, totalInterest = 0;
+    const CAP = 1200; // 100 years
+
+    while (bal.some((b) => b > 0.005)) {
+      if (months >= CAP) return { months: Infinity, totalInterest, impossible: true };
+      months++;
+
+      // accrue interest
+      for (let i = 0; i < bal.length; i++) {
+        if (bal[i] > 0) { const it = bal[i] * rate[i]; bal[i] += it; totalInterest += it; }
+      }
+
+      // budget for this month = sum of minimums (capped to balance) + extra
+      let pool = extra;
+      for (let i = 0; i < bal.length; i++) {
+        if (bal[i] <= 0) continue;
+        const pay = Math.min(min[i], bal[i]);
+        bal[i] -= pay;
+        pool += (min[i] - pay); // leftover minimum rolls into the pool
+      }
+
+      // apply pool to highest-rate balances first
+      for (const i of order) {
+        if (pool <= 0) break;
+        if (bal[i] <= 0) continue;
+        const pay = Math.min(pool, bal[i]);
+        bal[i] -= pay; pool -= pay;
+      }
+
+      // Detect a stall: if minimums can't cover interest and there's no extra.
+      if (months > 1 && extra <= 0) {
+        const totalMin = min.reduce((s, m, i) => s + (bal[i] > 0 ? m : 0), 0);
+        const totalInt = bal.reduce((s, b, i) => s + (b > 0 ? b * rate[i] : 0), 0);
+        if (totalMin <= totalInt + 0.005 && bal.some((b) => b > 0.005)) {
+          return { months: Infinity, totalInterest, impossible: true };
+        }
+      }
+    }
+    return { months, totalInterest, impossible: false };
+  }
+
+  const monthsToStr = (m) => {
+    if (!isFinite(m)) return "Never*";
+    const y = Math.floor(m / 12), mo = m % 12;
+    const parts = [];
+    if (y) parts.push(y + (y === 1 ? " year" : " years"));
+    if (mo) parts.push(mo + (mo === 1 ? " month" : " months"));
+    return parts.join(" ") || "0 months";
+  };
+
+  // ===========================================================================
+  // SCREEN 3 — PLANS
+  // ===========================================================================
+  const PLAN_DEFS = [
+    { key: "balanced",    cls: "green",  badge: "Least Aggressive", title: "Balanced 50/30/20 Lifestyle",
+      share: 0.25, desc: "Keep a healthy lifestyle while making steady, sustainable progress on your debt — extra payments stay modest so you still enjoy today." },
+    { key: "accelerated", cls: "orange", badge: "Moderate",         title: "Accelerated Payoff",
+      share: 0.50, desc: "Put roughly half of your spare cash (after minimums) toward debt. A strong middle ground — noticeably faster without going all-in." },
+    { key: "avalanche",   cls: "red",    badge: "Maximum Speed",    title: "Debt Avalanche",
+      share: 1.00, desc: "Throw every spare pound at your highest-interest debt until it's gone. The fastest route to freedom and the least interest paid." },
+  ];
+
+  let plansComputed = []; // cache for export
+
+  function buildPlans() {
+    const debts = getDebts().filter((d) => d.balance > 0);
+    const available = availableForDebt();
+    const minTotal = debts.reduce((s, d) => s + d.min, 0);
+    const surplus = Math.max(0, available - minTotal);
+
+    const grid = document.getElementById("plansGrid");
+    const noteEl = document.getElementById("planNote");
+    grid.innerHTML = "";
+    noteEl.innerHTML = "";
+
+    if (available < minTotal) {
+      noteEl.innerHTML = `<div class="note">⚠️ Your minimum payments (${fmt(minTotal)}) are higher than the money left after your other expenses (${fmt(available)}). Trim some expenses on the budget screen, or these timelines assume you can still cover the minimums.</div>`;
+    } else if (surplus <= 0) {
+      noteEl.innerHTML = `<div class="note">💡 After your expenses and minimum payments there's no spare cash to accelerate with, so all three plans pay just the minimums. Free up some budget room to unlock faster payoff.</div>`;
+    }
+
+    plansComputed = PLAN_DEFS.map((p) => {
+      const extra = surplus * p.share;
+      const monthly = minTotal + extra;
+      const sim = simulate(debts, extra);
+      // After debt-free, the freed monthly (what they were paying to debt)
+      // plus they keep the rest of income for a 50/30/20 lifestyle.
+      const income = Math.max(0, parseFloat(incomeEl.value) || 0);
+      const savings = income * 0.20, wants = income * 0.30;
+      return { def: p, extra, monthly, sim, income, savings, wants };
+    });
+
+    // find fastest / least-interest for "best" highlighting
+    const finite = plansComputed.filter((x) => isFinite(x.sim.months));
+    const bestTime = finite.length ? Math.min(...finite.map((x) => x.sim.months)) : null;
+
+    plansComputed.forEach((x) => {
+      const p = x.def;
+      const card = document.createElement("div");
+      card.className = `plan ${p.cls}`;
+      card.dataset.key = p.key;
+
+      let after;
+      if (p.key === "balanced") {
+        after = `<b>After debt-free:</b> a full 50/30/20 split — <b>${fmt(x.wants)}</b> fun money and <b>${fmt(x.savings)}</b> into savings & investments every month.`;
+      } else if (p.key === "accelerated") {
+        after = `<b>After debt-free:</b> switch to 50/30/20 with the freed <b>${fmt(x.monthly)}</b>/mo supercharging your savings.`;
+      } else {
+        after = `<b>After debt-free:</b> your entire income is yours again — a clean 50/30/20 lifestyle with <b>${fmt(x.savings)}</b>/mo invested.`;
+      }
+
+      card.innerHTML = `
+        <span class="badge">${p.badge}</span>
+        <h3>${p.title}</h3>
+        <div class="desc">${p.desc}</div>
+        <div class="hero">
+          <div class="t">Debt-free in</div>
+          <div class="v">${monthsToStr(x.sim.months)}</div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><span class="k">Total monthly to debt</span><span class="v">${fmt(x.monthly)}</span></div>
+          <div class="metric"><span class="k">Extra on top of minimums</span><span class="v">${fmt(x.extra)}</span></div>
+          <div class="metric"><span class="k">Total interest paid</span><span class="v">${isFinite(x.sim.months) ? fmt(x.sim.totalInterest) : "—"}</span></div>
+        </div>
+        <div class="after">${after}</div>
+        <div class="pick-wrap">
+          <button class="btn btn-primary pick-btn" type="button" style="width:100%;justify-content:center;background:linear-gradient(180deg, var(--accent2), var(--accent2));filter:saturate(1.1);">Select This Plan</button>
+          <button class="btn-link compare-link" type="button">Compare all plans</button>
+        </div>`;
+
+      card.querySelector(".pick-btn").addEventListener("click", () => {
+        document.querySelectorAll(".plan").forEach((c) => c.classList.remove("selected"));
+        card.classList.add("selected");
+        card.querySelector(".pick-btn").textContent = "✓ Plan Selected";
+      });
+      card.querySelector(".compare-link").addEventListener("click", () => {
+        document.getElementById("compareCard").scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      grid.appendChild(card);
+    });
+
+    // compare table
+    const tb = document.getElementById("compareBody");
+    tb.innerHTML = "";
+    const colorBy = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
+    plansComputed.forEach((x) => {
+      const tr = document.createElement("tr");
+      if (bestTime !== null && x.sim.months === bestTime) tr.className = "best";
+      tr.innerHTML = `
+        <td><span class="dotmark" style="background:${colorBy[x.def.cls]}"></span>${x.def.title}</td>
+        <td class="num">${fmt(x.monthly)}</td>
+        <td class="num">${monthsToStr(x.sim.months)}</td>
+        <td class="num">${isFinite(x.sim.months) ? fmt(x.sim.totalInterest) : "—"}</td>`;
+      tb.appendChild(tr);
+    });
+
+    if (plansComputed.some((x) => x.sim.impossible)) {
+      noteEl.innerHTML += `<div class="note" style="margin-top:10px;">*Some plans never fully clear the debt because the payment can't keep up with interest. Increasing your monthly payment fixes this.</div>`;
+    }
+  }
+
   // --- Export to PNG ---------------------------------------------------------
   const xmlEsc = (s) => String(s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -605,6 +1050,75 @@
   }
 
   document.getElementById("exportBtn").addEventListener("click", exportPng);
+
+  // --- Export the debt plans as a PNG ---------------------------------------
+  function rasterize(svg, W, H, filename, btn) {
+    const prev = btn ? btn.querySelector("span")?.textContent : null;
+    if (btn) btn.disabled = true;
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    const restore = () => { if (btn) btn.disabled = false; };
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = W * 2; canvas.height = H * 2;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(2, 2); ctx.drawImage(img, 0, 0, W, H);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((png) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(png);
+        a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        restore();
+      }, "image/png");
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); restore(); alert("Export failed, please try again."); };
+    img.src = url;
+  }
+
+  function buildPlanSvg() {
+    const W = 1100, H = 720;
+    const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const colorBy = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
+
+    const cw = 320, gap = 24, x0 = (W - (cw * 3 + gap * 2)) / 2, cy = 150, ch = 420;
+    let cards = "";
+    plansComputed.forEach((x, i) => {
+      const cx = x0 + i * (cw + gap);
+      const col = colorBy[x.def.cls];
+      const line = (yy, k, v) =>
+        `<text x="${cx + 22}" y="${yy}" font-size="14" fill="#8b97a8">${xmlEsc(k)}</text>` +
+        `<text x="${cx + cw - 22}" y="${yy}" font-size="14" font-weight="600" fill="#f4efe6" text-anchor="end">${xmlEsc(v)}</text>`;
+      cards +=
+        `<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" rx="16" fill="#161d2b" stroke="#232c3d"/>` +
+        `<rect x="${cx}" y="${cy}" width="${cw}" height="5" rx="2.5" fill="${col}"/>` +
+        `<text x="${cx + 22}" y="${cy + 38}" font-size="11" letter-spacing="1" font-weight="700" fill="${col}">${x.def.badge.toUpperCase()}</text>` +
+        `<text x="${cx + 22}" y="${cy + 64}" font-size="18" font-weight="700" fill="#f4efe6">${xmlEsc(x.def.title)}</text>` +
+        `<rect x="${cx + 22}" y="${cy + 84}" width="${cw - 44}" height="74" rx="10" fill="#0c121d"/>` +
+        `<text x="${cx + cw / 2}" y="${cy + 110}" font-size="12" fill="#8b97a8" text-anchor="middle">DEBT-FREE IN</text>` +
+        `<text x="${cx + cw / 2}" y="${cy + 142}" font-size="24" font-weight="800" fill="${col}" text-anchor="middle">${xmlEsc(monthsToStr(x.sim.months))}</text>` +
+        line(cy + 196, "Total monthly to debt", fmt(x.monthly)) +
+        line(cy + 230, "Extra on top of minimums", fmt(x.extra)) +
+        line(cy + 264, "Total interest paid", isFinite(x.sim.months) ? fmt(x.sim.totalInterest) : "—");
+    });
+
+    return { svg:
+`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${FONT}">
+  <rect width="${W}" height="${H}" fill="#0b0f17"/>
+  <rect x="16" y="16" width="${W - 32}" height="${H - 32}" rx="24" fill="#121826" stroke="#232c3d"/>
+  <text x="${W / 2}" y="74" font-size="30" font-weight="700" fill="#f4efe6" text-anchor="middle">Your Debt Freedom Strategies</text>
+  <text x="${W / 2}" y="102" font-size="15" fill="#8b97a8" text-anchor="middle">Generated ${dateStr}</text>
+  ${cards}
+</svg>`, W, H };
+  }
+
+  document.getElementById("exportPlanBtn").addEventListener("click", function () {
+    if (!plansComputed.length) return;
+    const { svg, W, H } = buildPlanSvg();
+    rasterize(svg, W, H, `debt-plans-${new Date().toISOString().slice(0, 10)}.png`, this);
+  });
 </script>
 </body>
 </html>
