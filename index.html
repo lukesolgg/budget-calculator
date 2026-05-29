@@ -337,15 +337,24 @@
   .iffree-tip { margin-top: 14px; font-size: 13px; line-height: 1.55; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 12px; }
   .iffree-tip b { color: var(--text); }
 
-  /* ---------- Schedule table ---------- */
-  .sched-table-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+  /* ---------- Per-card payment plan ---------- */
+  #scheduleTableWrap { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 760px) { #scheduleTableWrap { grid-template-columns: 1fr; } }
+  .card-plan { border: 1px solid var(--border); border-radius: 12px; background: #0c121d; overflow: hidden; }
+  .card-plan-head { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .card-plan-head .cp-rank { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #0b0f17; font-weight: 800; font-size: 12px; margin-right: 8px; vertical-align: middle; }
+  .card-plan-head .cp-name { font-size: 15px; font-weight: 700; vertical-align: middle; }
+  .card-plan-head .cp-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .card-plan-head .cp-meta b { color: var(--text); }
+  .card-badge.free { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #4ade80; background: #11301f; border: 1px solid #1f5c3a; border-radius: 999px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+  .card-plan-table-wrap { max-height: 280px; overflow-y: auto; }
   .sched-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .sched-table th, .sched-table td { padding: 9px 14px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  .sched-table th, .sched-table td { padding: 8px 16px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
   .sched-table th.num, .sched-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
   .sched-table thead th { position: sticky; top: 0; background: #141b29; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; z-index: 1; }
   .sched-table tbody tr:nth-child(even) { background: #0e141f; }
-  .sched-table tbody tr:hover { background: #16203040; }
   .sched-table td:first-child { color: var(--muted); }
+  .sched-table .done { color: #4ade80; font-weight: 600; }
 
   @media (max-width: 900px) {
     .plans-grid { grid-template-columns: 1fr; }
@@ -374,15 +383,15 @@
       <!-- Debts first -->
       <section class="card debts-card" style="margin-bottom:24px;">
         <div class="screen-head">
-          <h2>1. Tell us about your debts</h2>
-          <p>Add each debt to unlock personalised payoff strategies.</p>
+          <h2>1. Your credit cards &amp; loans</h2>
+          <p>Add each card or loan to unlock personalised payoff strategies.</p>
         </div>
 
         <div id="debtRows"></div>
 
         <button id="addDebt" class="btn btn-ghost" type="button">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Debt
+          Add Card / Loan
         </button>
 
         <div class="debt-total">
@@ -394,7 +403,7 @@
       <!-- Mortgage & savings -->
       <section class="card debts-card" style="margin-bottom:24px;">
         <div class="screen-head">
-          <h2>2. Mortgage &amp; savings</h2>
+          <h2>2. Mortgage, car loan &amp; savings</h2>
           <p>Optional — only fill these in if they apply to you.</p>
         </div>
 
@@ -413,6 +422,24 @@
           <div class="fld">
             <label class="field-label" style="margin-bottom:6px;">Interest rate <span style="text-transform:none;color:var(--muted)">(optional)</span></label>
             <span class="pct mort-pct"><input id="mortgageRate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="4.5" value="" /></span>
+          </div>
+        </div>
+
+        <label class="if-toggle" style="font-size:14px;margin:18px 0 4px;padding-top:18px;border-top:1px solid var(--border);width:100%;box-sizing:border-box;">
+          <input id="carLoanToggle" type="checkbox" /> I have a car loan (added to your payoff plan)
+        </label>
+        <div id="carLoanFields" class="mortgage-fields" style="display:none;">
+          <div class="fld">
+            <label class="field-label" style="margin-bottom:6px;">Balance remaining</label>
+            <span class="money mort-money"><input id="carBalance" type="number" inputmode="decimal" min="0" placeholder="8200" value="" /></span>
+          </div>
+          <div class="fld">
+            <label class="field-label" style="margin-bottom:6px;">Monthly payment</label>
+            <span class="money mort-money"><input id="carPayment" type="number" inputmode="decimal" min="0" placeholder="210" value="" /></span>
+          </div>
+          <div class="fld">
+            <label class="field-label" style="margin-bottom:6px;">Interest rate</label>
+            <span class="pct mort-pct"><input id="carRate" type="number" inputmode="decimal" min="0" step="0.1" placeholder="7.4" value="" /></span>
           </div>
         </div>
 
@@ -589,9 +616,9 @@
         <h3 style="margin:0 0 14px;">Month-by-month milestones</h3>
         <div id="scheduleList" class="schedule-list"></div>
 
-        <h3 style="margin:26px 0 4px;">Exact monthly payments</h3>
-        <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Exactly what to pay toward each debt every month. ✓ means that debt is cleared.</p>
-        <div id="scheduleTableWrap" class="sched-table-wrap"></div>
+        <h3 style="margin:26px 0 4px;">Exact payment plan — card by card</h3>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Each debt in the order you'll clear it, with exactly what to pay and when.</p>
+        <div id="scheduleTableWrap"></div>
       </section>
     </section>
 
@@ -659,6 +686,30 @@
     if (on) rentRow.querySelector("input").value = ""; // clear rent so it isn't double-counted
     refreshDebts();
   });
+
+  // Car loan toggle — when on, it's added to the payoff plan as a real debt.
+  const carLoanToggle = document.getElementById("carLoanToggle");
+  const carLoanFields = document.getElementById("carLoanFields");
+  carLoanToggle.addEventListener("change", () => {
+    carLoanFields.style.display = carLoanToggle.checked ? "" : "none";
+    refreshDebts();
+  });
+  carLoanFields.addEventListener("input", refreshDebts);
+
+  // Returns the car loan as a debt object, or null if not active/empty.
+  function carLoanDebt() {
+    if (!carLoanToggle.checked) return null;
+    const balance = Math.max(0, parseFloat(document.getElementById("carBalance").value) || 0);
+    if (balance <= 0) return null;
+    return {
+      name: "Car Loan",
+      balance,
+      min: Math.max(0, parseFloat(document.getElementById("carPayment").value) || 0),
+      rate: Math.max(0, parseFloat(document.getElementById("carRate").value) || 0),
+      ifFree: false,
+      freeMonths: 0,
+    };
+  }
 
   // Show "use now" field only once some savings are entered.
   savingsTotalEl.addEventListener("input", () => {
@@ -909,9 +960,11 @@
   const MAX_DEBTS = 8;
 
   const DEBT_PLACEHOLDERS = [
-    { name: "Credit Card",  bal: 4500, min: 120, rate: 22.9 },
-    { name: "Car Loan",     bal: 8200, min: 210, rate: 7.4 },
-    { name: "Student Loan", bal: 15000, min: 180, rate: 6.1 },
+    { name: "Visa Credit Card",      bal: 4500, min: 120, rate: 22.9 },
+    { name: "Barclaycard",           bal: 2800, min: 75,  rate: 24.9 },
+    { name: "MBNA Card",             bal: 1900, min: 50,  rate: 19.9 },
+    { name: "Store Card",            bal: 900,  min: 25,  rate: 29.9 },
+    { name: "Amex",                  bal: 3200, min: 90,  rate: 21.9 },
   ];
 
   function addDebtRow() {
@@ -963,7 +1016,7 @@
   }
 
   function getDebts() {
-    return [...debtRowsEl.querySelectorAll(".debt-item")].map((item) => {
+    const cards = [...debtRowsEl.querySelectorAll(".debt-item")].map((item) => {
       const ifFree = item.querySelector(".d-iffree").checked;
       const until = item.querySelector(".d-ifuntil").value; // "YYYY-MM" or ""
       return {
@@ -976,6 +1029,9 @@
         freeMonths: ifFree ? monthsUntil(until) : 0,
       };
     });
+    const car = carLoanDebt();
+    if (car) cards.push(car);
+    return cards;
   }
 
   // Whole months between now and the start of the given "YYYY-MM" month.
@@ -1536,22 +1592,61 @@
     ).join("");
   }
 
-  // Exact per-debt payment table for every month until debt-free.
+  // Exact per-card payment plan — one block per debt, in payoff order, each
+  // showing its own month-by-month payment timeline until it's cleared.
   function renderScheduleTable(debts, sim) {
     const wrap = document.getElementById("scheduleTableWrap");
     if (!sim.schedule || !sim.schedule.length || !isFinite(sim.months)) {
-      wrap.innerHTML = `<p style="color:var(--muted);font-size:13px;margin:0;">A full month-by-month payment table isn't available for this plan (the debt isn't projected to clear).</p>`;
+      wrap.innerHTML = `<p style="color:var(--muted);font-size:13px;margin:0;">A full month-by-month payment plan isn't available (these debts aren't projected to clear with the current payment).</p>`;
       return;
     }
-    const head = `<tr><th>Month</th>${debts.map((d) => `<th class="num">${xmlEsc(d.name)}</th>`).join("")}<th class="num">Total</th><th class="num">Balance left</th></tr>`;
-    const rows = sim.schedule.map((row, m) => {
-      const total = row.pay.reduce((s, p) => s + p, 0);
-      const balLeft = row.bal.reduce((s, b) => s + b, 0);
-      const cells = row.pay.map((p, i) =>
-        `<td class="num">${p > 0.5 ? fmt(p) : (row.bal[i] > 0.5 ? "—" : "✓")}</td>`).join("");
-      return `<tr><td>${m + 1}</td>${cells}<td class="num"><b>${fmt(total)}</b></td><td class="num">${fmt(balLeft)}</td></tr>`;
+
+    // Order the cards by when they're cleared (the order you actually finish them).
+    const idxByClear = debts.map((_, i) => i)
+      .sort((a, b) => (sim.clearedMonth[a] || 1e9) - (sim.clearedMonth[b] || 1e9));
+
+    wrap.innerHTML = idxByClear.map((i, rank) => {
+      const d = debts[i];
+      const clear = sim.clearedMonth[i];
+      const lump = sim.lumpPerDebt[i] || 0;
+
+      // Build this card's row list: each month it receives a payment.
+      const rows = [];
+      if (lump > 0.5) rows.push({ label: "Start (savings)", pay: lump, bal: null, lump: true });
+      for (let m = 0; m < sim.schedule.length; m++) {
+        const pay = sim.schedule[m].pay[i];
+        const bal = sim.schedule[m].bal[i];
+        if (pay > 0.5 || bal > 0.5) rows.push({ label: `Month ${m + 1}`, pay, bal });
+        if (bal <= 0.5) break; // stop once cleared
+      }
+
+      // Collapse long middle runs of identical payments to keep it tidy.
+      const body = rows.map((r) => {
+        const balTxt = r.lump ? "" : (r.bal > 0.5 ? fmt(r.bal) : `<span class="done">cleared ✓</span>`);
+        return `<tr><td>${r.label}</td><td class="num">${r.pay > 0.5 ? fmt(r.pay) : "—"}</td><td class="num">${balTxt}</td></tr>`;
+      }).join("");
+
+      const freeBadge = d.freeMonths > 0
+        ? `<span class="card-badge free">0% for ${d.freeMonths} mo</span>` : "";
+      const clearTxt = clear ? `Cleared in ${monthsToStr(clear)}` : "Not cleared in projection";
+
+      return `<div class="card-plan">
+        <div class="card-plan-head">
+          <div>
+            <span class="cp-rank">${rank + 1}</span>
+            <span class="cp-name">${xmlEsc(d.name)}</span>
+            ${freeBadge}
+          </div>
+          <div class="cp-meta">${fmt(d.balance)} · ${d.rate}% APR · <b>${clearTxt}</b></div>
+        </div>
+        <div class="card-plan-table-wrap">
+          <table class="sched-table">
+            <thead><tr><th>When</th><th class="num">Pay</th><th class="num">Balance after</th></tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </div>`;
     }).join("");
-    wrap.innerHTML = `<table class="sched-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
   document.querySelectorAll(".back-to-results").forEach((b) =>
