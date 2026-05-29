@@ -298,24 +298,17 @@
     const total = Math.max(income, totalExpenses);
     if (total <= 0) return;
 
-    // Dark track sits behind only the expense arc. The inter-segment gaps
-    // reveal it, dividing each section. The leftover region has no track,
-    // so the page background shows through.
-    const expFrac = Math.min(1, totalExpenses / total);
-    if (expFrac > 0) {
-      const tDash = expFrac * circ;
-      const track = document.createElementNS(SVGNS, "circle");
-      track.setAttribute("cx", cx);
-      track.setAttribute("cy", cy);
-      track.setAttribute("r", r);
-      track.setAttribute("fill", "none");
-      track.setAttribute("stroke", "#262d3b");
-      track.setAttribute("stroke-width", stroke + 9);
-      track.setAttribute("stroke-linecap", "round");
-      track.setAttribute("stroke-dasharray", `${tDash} ${circ - tDash}`);
-      track.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
-      donut.appendChild(track);
-    }
+    // Full dark background ring — a clean, complete circle. The colored
+    // expense segments sit on top at the same width, and the gaps between
+    // them reveal this ring, evenly dividing each section.
+    const track = document.createElementNS(SVGNS, "circle");
+    track.setAttribute("cx", cx);
+    track.setAttribute("cy", cy);
+    track.setAttribute("r", r);
+    track.setAttribute("fill", "none");
+    track.setAttribute("stroke", "#262d3b");
+    track.setAttribute("stroke-width", stroke);
+    donut.appendChild(track);
 
     let startDeg = 0; // cumulative degrees from the top, clockwise
     items.forEach((c) => {
