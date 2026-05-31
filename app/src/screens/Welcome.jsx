@@ -8,12 +8,13 @@ export default function Welcome({ onNew, onReturn, onContinue, canContinue }) {
           <path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" />
         </svg>
       </div>
-      <h1 className="mb-2.5 text-[34px] font-bold tracking-tight">
-        Debt Freedom <span className="text-accent">Planner</span>
+      <h1 className="mb-2.5 text-[40px] font-bold tracking-tight">
+        <span className="text-accent">Orcl.</span>
       </h1>
       <p className="mb-8 text-base leading-relaxed text-muted">
-        Answer a few quick questions and we'll build you a personalised,
-        month-by-month plan to clear your debt and take control of your money.
+        Build an anonymous profile and we'll design personalised systems to
+        maximise your success — starting with a month-by-month plan to crush
+        your debt and take control of your money.
       </p>
       <div className="mx-auto flex max-w-[360px] flex-col gap-3">
         <Button onClick={onNew} className="w-full py-[15px] text-[15px]">I'm new — let's get started</Button>
