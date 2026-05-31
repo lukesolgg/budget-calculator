@@ -198,6 +198,41 @@ export function buildPlans(debts, monthlyIncome, living, lump) {
   return { plans, available, minTotal, surplus, bestTime };
 }
 
+// ---- retirement projection ----------------------------------------------
+// Compound a savings pot monthly at `annualRate` until the user turns
+// `retireAge`. While in debt (first `debtMonths`), they contribute
+// `monthlyWhileDebt`; once debt-free they contribute `monthlyAfterDebt`
+// (typically 20% of income — the 50/30/20 savings slice).
+// Returns { months, balanceAtRetirement, totalContributed, totalInterest,
+//           yearly: [{ age, balance, contributed }] } or null if no horizon.
+export function projectRetirement({
+  age, retireAge = 60, annualRate = 0.045,
+  monthlyWhileDebt, monthlyAfterDebt, debtMonths, startingPot = 0,
+}) {
+  const a = Math.floor(age);
+  if (!a || a >= retireAge) return null;
+  const totalMonths = (retireAge - a) * 12;
+  const mRate = annualRate / 12;
+
+  let bal = startingPot, contributed = 0;
+  const yearly = [];
+  for (let m = 1; m <= totalMonths; m++) {
+    bal += bal * mRate; // monthly compounding
+    const contrib = m <= debtMonths ? monthlyWhileDebt : monthlyAfterDebt;
+    bal += contrib; contributed += contrib;
+    if (m % 12 === 0) {
+      yearly.push({ age: a + m / 12, balance: bal, contributed: startingPot + contributed });
+    }
+  }
+  return {
+    months: totalMonths,
+    balanceAtRetirement: bal,
+    totalContributed: startingPot + contributed,
+    totalInterest: bal - startingPot - contributed,
+    yearly,
+  };
+}
+
 // For an interest-free debt: payment needed to clear in time, and the
 // least-interest fallback if that's unaffordable.
 export function projectInterestFreeShortfall(d, payment) {

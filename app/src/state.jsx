@@ -33,6 +33,7 @@ const blankDebt = () => ({ name: "", bal: "", min: "", rate: "", iffree: false, 
 
 export const initialState = {
   payFrequency: "monthly",
+  age: "",
   income: "",
   hasDebt: true,
   debts: [blankDebt()],

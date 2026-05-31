@@ -5,7 +5,7 @@ import {
 } from "../state.jsx";
 import { fmt } from "../lib/engine.js";
 
-const STEPS = ["freq", "income", "mortgage", "car", "debts"];
+const STEPS = ["age", "freq", "income", "mortgage", "car", "debts"];
 
 export default function Wizard({ onDone, onExitTop }) {
   const { state, update } = usePlanner();
@@ -16,6 +16,10 @@ export default function Wizard({ onDone, onExitTop }) {
 
   const next = () => {
     if (step === "income" && income <= 0) return;
+    if (step === "age") {
+      const a = parseInt(state.age, 10);
+      if (!a || a < 16 || a > 100) return;
+    }
     if (idx < STEPS.length - 1) setIdx(idx + 1);
     else onDone();
   };
@@ -31,6 +35,7 @@ export default function Wizard({ onDone, onExitTop }) {
       </div>
 
       <div key={step} className="animate-pop">
+        {step === "age" && <AgeStep state={state} update={update} />}
         {step === "freq" && <FreqStep state={state} update={update} />}
         {step === "income" && <IncomeStep state={state} update={update} income={income} />}
         {step === "mortgage" && <MortgageStep state={state} update={update} />}
@@ -58,6 +63,26 @@ function StepHead({ kicker, title, sub }) {
       <Kicker>{kicker}</Kicker>
       <h2 className="mb-1.5 mt-1.5 text-[27px] font-bold tracking-tight">{title}</h2>
       <p className="mb-[26px] text-[15px] leading-snug text-muted">{sub}</p>
+    </>
+  );
+}
+
+function AgeStep({ state, update }) {
+  const a = parseInt(state.age, 10);
+  const years = a && a < 60 ? 60 - a : null;
+  return (
+    <>
+      <StepHead kicker="About you" title="How old are you?" sub="We'll plan your journey through to retirement at 60." />
+      <div className="relative mx-auto max-w-[220px]">
+        <input
+          type="number" inputMode="numeric" min="16" max="100" value={state.age}
+          onChange={(e) => update({ age: e.target.value })} placeholder="30"
+          className="w-full rounded-xl border border-border bg-[#0c121d] px-[18px] py-[18px] text-center text-[32px] font-bold text-ink outline-none transition focus:border-accent focus:shadow-[0_0_24px_-8px_#4ea8ff]"
+        />
+      </div>
+      <div className="mt-3 min-h-[18px] text-center text-[13px] text-muted">
+        {years && <>That's <b className="text-good">{years} years</b> of compounding until you're 60.</>}
+      </div>
     </>
   );
 }

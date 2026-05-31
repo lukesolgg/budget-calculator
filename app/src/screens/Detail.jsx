@@ -4,7 +4,7 @@ import Donut from "../components/Donut.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, savingsToDeployOf,
 } from "../state.jsx";
-import { fmt, monthsToStr, buildPlans, simulateDetailed, monthlyToFreq, freqLabel } from "../lib/engine.js";
+import { fmt, monthsToStr, buildPlans, simulateDetailed, monthlyToFreq, freqLabel, projectRetirement } from "../lib/engine.js";
 
 const ACC = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 const PAYS_PER_MONTH = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1 };
@@ -61,6 +61,21 @@ export default function Detail({ planKey, onBack }) {
 
   const debtPayments = baseToDebt + alloc.extra;
   const sim = useMemo(() => simulateDetailed(debts, alloc.extra, lump), [debts, alloc.extra, lump]);
+
+  // Retirement projection: contribute the savings-slider amount while in debt,
+  // then 20% of income (the 50/30/20 savings slice) once debt-free, compounding
+  // at 4.5%/yr in a savings account until age 60.
+  const age = parseInt(state.age, 10);
+  const debtMonths = isFinite(sim.months) ? sim.months : 0;
+  const afterDebtSaving = income * 0.2;
+  const retire = useMemo(
+    () => projectRetirement({
+      age, retireAge: 60, annualRate: 0.045,
+      monthlyWhileDebt: alloc.savings, monthlyAfterDebt: afterDebtSaving,
+      debtMonths, startingPot: 0,
+    }),
+    [age, alloc.savings, afterDebtSaving, debtMonths]
+  );
 
   const allocItems = [
     { key: "living", name: "Living expenses", color: "#4cb8f0", value: living },
@@ -160,7 +175,68 @@ export default function Detail({ planKey, onBack }) {
         </p>
         <ScheduleCards debts={debts} sim={sim} weekly={weekly} payWord={payWord} freq={freq} />
       </Card>
+
+      <RetirementCard retire={retire} age={age} debtMonths={debtMonths} whileDebt={alloc.savings} afterDebt={afterDebtSaving} />
     </div>
+  );
+}
+
+function RetirementCard({ retire, age, debtMonths, whileDebt, afterDebt }) {
+  if (!age) {
+    return (
+      <Card className="mt-6 text-center">
+        <h3 className="font-bold">🌅 Retirement projection</h3>
+        <p className="mt-1 text-sm text-muted">Add your age in setup and we'll project what you could retire with at 60.</p>
+      </Card>
+    );
+  }
+  if (!retire) {
+    return (
+      <Card className="mt-6 text-center">
+        <h3 className="font-bold">🌅 Retirement projection</h3>
+        <p className="mt-1 text-sm text-muted">You're already 60 or over — the projection is for those still saving toward 60.</p>
+      </Card>
+    );
+  }
+  const dy = Math.floor(debtMonths / 12), dm = debtMonths % 12;
+  const debtSpan = debtMonths > 0 ? `${dy ? dy + "y " : ""}${dm}m` : "now";
+  // Sparkline of the yearly balances.
+  const pts = retire.yearly;
+  const max = pts[pts.length - 1].balance || 1;
+  const W = 600, H = 90;
+  const line = pts.map((p, i) => `${(i / (pts.length - 1)) * W},${H - (p.balance / max) * H}`).join(" ");
+
+  return (
+    <Card className="mt-6">
+      <h3 className="font-bold">🌅 What you could retire with at 60</h3>
+      <p className="mb-4 text-[13px] text-muted">
+        Assuming a savings account at <b className="text-ink">4.5%/yr</b>, and that your income &amp; spending stay the same.
+        You save <b className="text-ink">{fmt(whileDebt)}/mo</b> while clearing debt ({debtSpan}), then <b className="text-ink">{fmt(afterDebt)}/mo</b> (your 50/30/20 savings) once debt-free.
+      </p>
+
+      <div className="mb-4 rounded-xl bg-[#0c121d] p-5 text-center">
+        <div className="text-[12px] uppercase tracking-[.06em] text-muted">Projected pot at 60</div>
+        <div className="mt-1 text-[40px] font-extrabold text-good">{fmt(retire.balanceAtRetirement)}</div>
+        <div className="mt-1 text-[13px] text-muted">
+          You'd put in <b className="text-ink">{fmt(retire.totalContributed)}</b> and earn <b className="text-good">{fmt(retire.totalInterest)}</b> in interest.
+        </div>
+      </div>
+
+      {/* growth sparkline */}
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[90px] w-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="retFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#3ad07f" stopOpacity="0.35" />
+            <stop offset="1" stopColor="#3ad07f" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polygon points={`0,${H} ${line} ${W},${H}`} fill="url(#retFill)" />
+        <polyline points={line} fill="none" stroke="#3ad07f" strokeWidth="2.5" strokeLinejoin="round" />
+      </svg>
+      <div className="mt-1 flex justify-between text-[11px] text-muted">
+        <span>Age {age}</span><span>Age 60</span>
+      </div>
+    </Card>
   );
 }
 
