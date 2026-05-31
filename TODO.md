@@ -1,36 +1,48 @@
-# Orcl. — Agreed TODO (next batch)
+# Orcl. — Agreed TODO
 
-Status: NOT STARTED. Knock these out before adding new features.
+Status: DONE (batch below completed). Add the next batch under "Next up".
 
-## Onboarding
-- [ ] Age step: replace the white number spinner with a clean iOS/Android-style
-      scroll/drag wheel picker (scroll wheel on desktop, drag/throw on mobile).
-      No actual scrollbar. Tasteful, not ugly.
-- [ ] Desktop: make onboarding steps fill more of the page (wider/bigger layout
-      across ALL wizard steps, not just age).
-- [ ] Budget: rename expense category "Gas" → "Petrol/Diesel".
-- [ ] Budget: REMOVE the "Savings / cash on hand" block (moves to a future
-      dedicated savings/investments/pension onboarding).
+## Completed batch (done)
 
-## Debt & budget (Results)
-- [ ] Remove the "Beat the interest deadline" section from this page.
+### Onboarding
+- [x] Age step: iOS/Android-style scroll/drag wheel picker (native momentum
+      scroll on mobile, scroll wheel on desktop, no scrollbar, centre highlight
+      band + fades). Component: `WheelPicker` in Wizard.jsx.
+- [x] Desktop: wizard fills more of the page (max-w 600 → md:760 → lg:900).
+- [x] Budget: expense category "Gas" → "Petrol/Diesel" (kept `gas` key so saved
+      data isn't broken).
+- [x] Budget: REMOVED the "Savings / cash on hand" block (moves to a future
+      dedicated savings/investments/pension onboarding). State is untouched, so
+      the engine's lump-sum just defaults to 0.
 
-## Plan detail
-- [ ] Fix the slight inner scroll on schedule cards when 7+ months. Make each
-      debt's payment plan one-per-row (not 2×3 grid), add an expand/collapse tab
-      so long ones don't force scrolling.
+### Debt & budget (Results)
+- [x] Removed the "Beat the interest deadline" section.
 
-## Dashboard
-- [ ] Top-right button currently "Sign in / Sign up" → just make it "Log out"
-      (on the dashboard). (Check: behaviour when not signed in.)
+### Plan detail
+- [x] Schedule cards are one-per-row (single column), no more inner scroll.
+      Long plans (7+ months) collapse to the first 6 rows with a "Show all N
+      months" expand/collapse toggle.
 
-## Savings page
-- [ ] Reformat as TABLES per category (Easy Access / Regular Saver / Fixed /
-      Cash ISA) listing all accounts.
-- [ ] Click a row → expands an inline "forecast your earnings" dropdown for that
-      account. Opening one auto-closes any other open one (accordion).
-- [ ] Add a hero image/graphic + a nice description (these are the most
-      competitive UK savings accounts right now).
+### Dashboard
+- [x] When NOT signed in, the top bar button is now "Log out" (returns to the
+      Welcome/home screen) instead of "Sign in / Sign up". Signed-in "Log out"
+      unchanged (clears session) and also returns home. Returning users still
+      sign in from the Welcome screen.
+
+### Savings page
+- [x] Reformatted as TABLES per category (Easy Access / Regular Saver / Fixed
+      Rate / Cash ISA) listing all accounts.
+- [x] Click a row → expands an inline "forecast your earnings" dropdown for that
+      account (monthly amount + years, that account's AER, growth chart).
+      Accordion: opening one auto-closes any other.
+- [x] Hero graphic (inline SVG) + description (most competitive UK accounts).
+
+## Next up
+- (none agreed yet)
 
 ## Notes
 - Future onboarding (separate): savings / investments / pension.
+- Worth a visual pass on a real device for the age wheel feel + savings tables
+  on mobile.
+</content>
+</invoke>

@@ -64,6 +64,17 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- TODO batch done (build-verified; needs a device visual pass): Onboarding —
+  age step now a custom `WheelPicker` (Wizard.jsx: native momentum scroll/snap,
+  no scrollbar, centre band + fades; defaults empty age to 30); wizard wider on
+  desktop (md:760/lg:900). Budget — "Gas"→"Petrol/Diesel" (key kept), removed
+  the "Savings / cash on hand" block. Results — removed "Beat the interest
+  deadline" panel. Detail — schedule cards one-per-row, no inner scroll, 7+
+  month plans collapse to 6 rows w/ "Show all" toggle (Chevron now does up/down).
+  Account bar — not-signed-in button is "Log out" (→ Welcome) instead of "Sign
+  in / Sign up" (App passes onLogout). Savings — hero SVG + copy, per-category
+  TABLES, row-click accordion opens an inline per-account "forecast your
+  earnings" (one open at a time). New CSS util `.no-scrollbar`.
 - Career & income LIVE (verified): jobs.js = 406 UK occupations (ONS ASHE Table
   14, 4-digit SOC, annual+hourly medians) via app/scripts/build-jobs.cjs (reads
   rawdata/table14/*.xlsx, gitignored). data/careers.js (progressionFrom/search/
