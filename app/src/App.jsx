@@ -14,7 +14,12 @@ function Shell() {
   const [signInSignal, setSignInSignal] = useState(0);
   const go = (s) => { setScreen(s); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const hasDraft = (() => {
-    try { return !!JSON.parse(localStorage.getItem("dfp_draft_react") || "null")?.income; } catch { return false; }
+    try {
+      const raw = JSON.parse(localStorage.getItem("dfp_draft_react") || "null");
+      if (!raw) return false;
+      // Namespaced (schema 2+) stores income under profile; legacy was top-level.
+      return !!(raw.profile?.income || raw.income);
+    } catch { return false; }
   })();
 
   return (
