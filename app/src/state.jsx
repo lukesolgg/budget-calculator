@@ -42,6 +42,10 @@ export const initialState = {
   car: { on: false, balance: "", payment: "", rate: "" },
   savings: { total: "", use: "" },
   expenses: {}, // key -> string value
+  // Debt-plan choices (remembered):
+  selectedPlan: "",        // "" | balanced | accelerated | avalanche
+  alloc: null,             // locked { fun, savings, extra } split, or null
+  allocLocked: false,
 };
 
 const DRAFT_KEY = "dfp_draft_react";
