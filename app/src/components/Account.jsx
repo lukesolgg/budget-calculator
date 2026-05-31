@@ -49,9 +49,7 @@ export default function Account({ openSignal, showBar = true, onLogout }) {
             <Button onClick={doSave} className={`px-3.5 py-2 text-[13px] ${dirty ? "shadow-[0_0_0_2px_rgba(240,184,106,.5),0_6px_18px_rgba(18,184,134,.35)]" : ""}`}>Save progress</Button>
             <Button variant="ghost" onClick={() => { persistSession(null); flash("Logged out"); onLogout?.(); }} className="px-3.5 py-2 text-[13px]">Log out</Button>
           </>
-        ) : (
-          <Button variant="ghost" onClick={() => onLogout?.()} className="px-3.5 py-2 text-[13px]">Log out</Button>
-        )}
+        ) : null}
       </div>
       )}
 
