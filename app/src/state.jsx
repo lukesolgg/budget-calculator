@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { freqToMonthly, monthsUntil } from "./lib/engine.js";
+import { serialize, deserialize } from "./lib/profile.js";
 
 // Expense categories (key, label, colour) — drives the budget grid + donut.
 export const CATEGORIES = [
@@ -45,24 +46,44 @@ export const initialState = {
 
 const DRAFT_KEY = "dfp_draft_react";
 
+// Merge a partial (possibly-migrated) flat blob onto the defaults so a restore
+// never leaves required fields missing. Nested objects merge one level deep.
+export function hydrate(flat) {
+  if (!flat) return initialState;
+  return {
+    ...initialState,
+    ...flat,
+    mortgage: { ...initialState.mortgage, ...(flat.mortgage || {}) },
+    car: { ...initialState.car, ...(flat.car || {}) },
+    savings: { ...initialState.savings, ...(flat.savings || {}) },
+    debts: flat.debts && flat.debts.length ? flat.debts : initialState.debts,
+    expenses: flat.expenses || {},
+  };
+}
+
+// Convenience for cloud accounts: stored blob <-> flat state.
+export const toStored = (state) => serialize(state);
+export const fromStored = (raw) => hydrate(deserialize(raw));
+
 const StateCtx = createContext(null);
 export const usePlanner = () => useContext(StateCtx);
 
 export function PlannerProvider({ children }) {
   const [state, setState] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-      if (saved) return { ...initialState, ...saved };
+      const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      const flat = deserialize(raw);
+      if (flat) return hydrate(flat);
     } catch {}
     return initialState;
   });
 
-  // Debounced draft autosave to localStorage.
+  // Debounced draft autosave to localStorage (versioned namespaced blob).
   const timer = useRef(null);
   useEffect(() => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(state)); } catch {}
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(serialize(state))); } catch {}
     }, 400);
     return () => clearTimeout(timer.current);
   }, [state]);

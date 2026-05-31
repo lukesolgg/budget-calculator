@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "./ui.jsx";
 import { backend, useSupabase } from "../lib/accounts.js";
-import { usePlanner, initialState } from "../state.jsx";
+import { usePlanner, toStored, fromStored } from "../state.jsx";
 
 // Account bar (top-right) + auth modal. Handles signup/login/save and syncs
 // the planner state to the cloud.
@@ -30,7 +30,7 @@ export default function Account({ openSignal, showBar = true }) {
 
   const doSave = async () => {
     if (!session) return;
-    const res = await backend.save(session.username, session.pin, state);
+    const res = await backend.save(session.username, session.pin, toStored(state));
     if (res.ok) { setDirty(false); flash("Saved ✓"); }
     else flash(res.error || "Save failed");
   };
@@ -62,12 +62,12 @@ export default function Account({ openSignal, showBar = true }) {
           onSwitch={(m) => setModal(m)}
           onAuthed={(username, pin, data) => {
             persistSession({ username, pin });
-            if (data) setState({ ...initialState, ...data });
+            if (data) setState(fromStored(data));
             setDirty(false);
             setModal(null);
             flash(data ? "Signed in — plan loaded ✓" : "Account created ✓");
           }}
-          getState={() => state}
+          getState={() => toStored(state)}
         />
       )}
     </>
