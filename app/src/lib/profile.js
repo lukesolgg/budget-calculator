@@ -13,13 +13,13 @@
 // rates) lives in src/data/* and NEVER touches a user profile.
 // ===========================================================================
 
-export const CURRENT_SCHEMA = 3;
+export const CURRENT_SCHEMA = 4;
 
 // Flat in-memory state -> versioned namespaced blob for storage.
 export function serialize(s) {
   return {
     schemaVersion: CURRENT_SCHEMA,
-    profile: { age: s.age, payFrequency: s.payFrequency, income: s.income },
+    profile: { age: s.age, payFrequency: s.payFrequency, income: s.income, jobSoc: s.jobSoc },
     debts: { hasDebt: s.hasDebt, list: s.debts, mortgage: s.mortgage, car: s.car },
     budget: { expenses: s.expenses, savings: s.savings },
     plan: { selected: s.selectedPlan, alloc: s.alloc, locked: s.allocLocked },
@@ -35,7 +35,7 @@ export function deserialize(raw) {
   // v2+ : read known namespaces (forward-compatible — unknown keys ignored).
   const p = raw.profile || {}, d = raw.debts || {}, b = raw.budget || {}, pl = raw.plan || {};
   return strip({
-    age: p.age, payFrequency: p.payFrequency, income: p.income,
+    age: p.age, payFrequency: p.payFrequency, income: p.income, jobSoc: p.jobSoc,
     hasDebt: d.hasDebt, debts: d.list, mortgage: d.mortgage, car: d.car,
     expenses: b.expenses, savings: b.savings,
     selectedPlan: pl.selected, alloc: pl.alloc, allocLocked: pl.locked,

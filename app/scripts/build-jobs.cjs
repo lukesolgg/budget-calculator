@@ -7,9 +7,9 @@
 const XLSX = require("xlsx");
 const fs = require("fs");
 
-const RAW = "../rawdata";
-const ANNUAL = `${RAW}/PROV - Occupation SOC20 (2) Table 2.7a   Annual pay - Gross 2025.xlsx`;
-const HOURLY = `${RAW}/PROV - Occupation SOC20 (2) Table 2.5a   Hourly pay - Gross 2025.xlsx`;
+const RAW = "../rawdata/table14";
+const ANNUAL = `${RAW}/PROV - Occupation SOC20 (4) Table 14.7a   Annual pay - Gross 2025.xlsx`;
+const HOURLY = `${RAW}/PROV - Occupation SOC20 (4) Table 14.5a   Hourly pay - Gross 2025.xlsx`;
 
 function readMedians(file, sheet) {
   const wb = XLSX.readFile(file);

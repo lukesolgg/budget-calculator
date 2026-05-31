@@ -36,6 +36,7 @@ export const initialState = {
   payFrequency: "monthly",
   age: "",
   income: "",
+  jobSoc: "",              // current role (ONS SOC code), or ""
   hasDebt: true,
   debts: [blankDebt()],
   mortgage: { on: false, payment: "", balance: "", rate: "" },
