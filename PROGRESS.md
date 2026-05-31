@@ -19,8 +19,17 @@ plans, weekly planner, investments, second-job suggestions.
   buildPlans, projectRetirement, projectInterestFreeShortfall, fmt,
   monthsToStr, freq helpers. Regression-verified — change carefully.
 - `app/src/state.jsx` — PlannerProvider context + selectors (monthlyIncomeOf,
-  debtsOf, livingOf, expenseItemsOf, etc.) + draft autosave to localStorage
-  key `dfp_draft_react`.
+  debtsOf, livingOf, expenseItemsOf, etc.) + draft autosave. In-memory state is
+  FLAT; persistence goes through profile.js (see below). `toStored`/`fromStored`
+  convert flat<->stored for cloud saves.
+- `app/src/lib/profile.js` — VERSIONED + NAMESPACED persistence (Option A).
+  serialize(flat) -> {schemaVersion, profile, debts, budget}; deserialize(raw)
+  migrates any old blob (v1 flat / v2) back to flat. CURRENT_SCHEMA=2. To add a
+  feature's data: add a namespace in serialize/deserialize + bump schema + add a
+  migration branch. Old saves auto-migrate. (regression-tested)
+- `app/src/data/` — REFERENCE data (shared, read-only, NOT in user profiles):
+  savings.js (UK accounts, live), jobs.js (ONS ASHE placeholder).
+- `data-raw/` — gitignored drop folder for raw source files to clean (ASHE zip).
 - `app/src/lib/accounts.js` — Supabase (username+PIN) w/ local fallback. Keys
   in this file. Schema/setup in SUPABASE_SETUP.md.
 - `app/src/components/` — ui.jsx (Button/Card/MoneyInput/Choice/Chevron),
@@ -53,6 +62,9 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Reference data: src/data/savings.js (UK accounts) + jobs.js placeholder.
+- Foundation refactor (Option A): versioned/namespaced persistence + migration.
+- Dashboard hub: stat header + section cards (debt live, others coming soon).
 - Home redesign: green theme, pre-alpha hero, 4 animated feature cards, 2 CTAs.
 - Retirement projection card (age -> 60 @ 4.5%).
 - Weekly/fortnightly per-paycheck payment breakdown.
