@@ -3,6 +3,7 @@ import { PlannerProvider } from "./state.jsx";
 import Welcome from "./screens/Welcome.jsx";
 import Wizard from "./screens/Wizard.jsx";
 import Inputs from "./screens/Inputs.jsx";
+import Dashboard from "./screens/Dashboard.jsx";
 import Results from "./screens/Results.jsx";
 import Detail from "./screens/Detail.jsx";
 import Account from "./components/Account.jsx";
@@ -21,7 +22,7 @@ function Shell() {
       <Account openSignal={signInSignal} showBar={screen !== "welcome"} />
       {screen === "welcome" && (
         <Welcome
-          onNew={() => (hasDraft ? go("inputs") : go("wizard"))}
+          onNew={() => (hasDraft ? go("dashboard") : go("wizard"))}
           onReturn={() => setSignInSignal((n) => n + 1)}
           hasDraft={hasDraft}
         />
@@ -30,10 +31,13 @@ function Shell() {
         <Wizard onDone={() => go("inputs")} onExitTop={() => go("welcome")} />
       )}
       {screen === "inputs" && (
-        <Inputs onBack={() => go("wizard")} onResults={() => go("results")} onEdit={() => go("wizard")} />
+        <Inputs onBack={() => go("wizard")} onResults={() => go("dashboard")} onEdit={() => go("wizard")} />
+      )}
+      {screen === "dashboard" && (
+        <Dashboard onOpenDebt={() => go("results")} onEdit={() => go("inputs")} />
       )}
       {screen === "results" && (
-        <Results onBack={() => go("inputs")} onPickPlan={(k) => { setPlanKey(k); go("detail"); }} />
+        <Results onBack={() => go("dashboard")} onPickPlan={(k) => { setPlanKey(k); go("detail"); }} />
       )}
       {screen === "detail" && (
         <Detail planKey={planKey} onBack={() => go("results")} />

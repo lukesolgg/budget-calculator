@@ -89,7 +89,7 @@ export default function Inputs({ onBack, onResults, onEdit }) {
       <div className="mt-6 flex items-center gap-3">
         <Button variant="ghost" onClick={onBack}><Chevron dir="left" /> Back</Button>
         <div className="flex-1" />
-        <Button onClick={onResults} disabled={!canProceed}>See My Results <Chevron /></Button>
+        <Button onClick={onResults} disabled={!canProceed}>Go to my dashboard <Chevron /></Button>
       </div>
     </div>
   );
