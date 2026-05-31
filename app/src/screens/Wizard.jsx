@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Choice, MoneyInput, Chevron } from "../components/ui.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, DEBT_PLACEHOLDERS, MAX_DEBTS,
@@ -26,7 +26,7 @@ export default function Wizard({ onDone, onExitTop }) {
   const back = () => (idx > 0 ? setIdx(idx - 1) : onExitTop());
 
   return (
-    <div className="mx-auto mt-[4vh] max-w-[600px]">
+    <div className="mx-auto mt-[4vh] max-w-[600px] md:max-w-[760px] lg:max-w-[900px]">
       <div className="mb-7 h-1.5 overflow-hidden rounded-full bg-[#1a2230]">
         <div
           className="h-full rounded-full bg-gradient-to-r from-[#3b86ff] to-[#4ea8ff] transition-[width] duration-300"
@@ -67,23 +67,117 @@ function StepHead({ kicker, title, sub }) {
   );
 }
 
+const AGE_MIN = 16, AGE_MAX = 100, AGE_DEFAULT = 30;
+const AGES = Array.from({ length: AGE_MAX - AGE_MIN + 1 }, (_, i) => AGE_MIN + i);
+
 function AgeStep({ state, update }) {
-  const a = parseInt(state.age, 10);
-  const years = a && a < 60 ? 60 - a : null;
+  // The wheel always has a value under the indicator, so default an empty age.
+  useEffect(() => {
+    if (!parseInt(state.age, 10)) update({ age: String(AGE_DEFAULT) });
+  }, []); // eslint-disable-line
+
+  const a = parseInt(state.age, 10) || AGE_DEFAULT;
+  const years = a < 60 ? 60 - a : null;
   return (
     <>
       <StepHead kicker="About you" title="How old are you?" sub="We'll plan your journey through to retirement at 60." />
-      <div className="relative mx-auto max-w-[220px]">
-        <input
-          type="number" inputMode="numeric" min="16" max="100" value={state.age}
-          onChange={(e) => update({ age: e.target.value })} placeholder="30"
-          className="w-full rounded-xl border border-border bg-[#0c121d] px-[18px] py-[18px] text-center text-[32px] font-bold text-ink outline-none transition focus:border-accent focus:shadow-[0_0_24px_-8px_#4ea8ff]"
-        />
-      </div>
-      <div className="mt-3 min-h-[18px] text-center text-[13px] text-muted">
-        {years && <>That's <b className="text-good">{years} years</b> of compounding until you're 60.</>}
+      <WheelPicker
+        values={AGES}
+        value={a}
+        onChange={(v) => update({ age: String(v) })}
+        renderLabel={(v) => v}
+      />
+      <div className="mt-4 min-h-[18px] text-center text-[13px] text-muted">
+        {years
+          ? <>That's <b className="text-good">{years} years</b> of compounding until you're 60.</>
+          : <>You can still make every remaining year count.</>}
       </div>
     </>
+  );
+}
+
+// iOS/Android-style wheel. Native momentum scroll (drag/throw on mobile, wheel
+// on desktop) with snap; no visible scrollbar. The item under the centre band
+// is the selected value.
+const ITEM_H = 48;
+const PAD_ITEMS = 2; // items of padding so first/last can reach the centre
+
+function WheelPicker({ values, value, onChange, renderLabel = (v) => v }) {
+  const ref = useRef(null);
+  const settle = useRef(null);
+  const selIndex = Math.max(0, values.indexOf(value));
+  const [centre, setCentre] = useState(selIndex);
+
+  // Position the wheel on the current value when it changes from outside a scroll.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const target = selIndex * ITEM_H;
+    if (Math.abs(el.scrollTop - target) > 1) el.scrollTop = target;
+    setCentre(selIndex);
+  }, [selIndex]);
+
+  const onScroll = () => {
+    const el = ref.current;
+    if (!el) return;
+    const idx = Math.max(0, Math.min(values.length - 1, Math.round(el.scrollTop / ITEM_H)));
+    if (idx !== centre) setCentre(idx);
+    // Commit the value once scrolling settles.
+    clearTimeout(settle.current);
+    settle.current = setTimeout(() => {
+      const v = values[idx];
+      if (v !== value) onChange(v);
+    }, 90);
+  };
+
+  const jump = (delta) => {
+    const idx = Math.max(0, Math.min(values.length - 1, centre + delta));
+    const el = ref.current;
+    if (el) el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
+  };
+
+  return (
+    <div
+      className="relative mx-auto max-w-[260px] select-none overflow-hidden rounded-2xl border border-border bg-[#0c121d]"
+      style={{ height: ITEM_H * (PAD_ITEMS * 2 + 1) }}
+    >
+      {/* Centre highlight band */}
+      <div
+        className="pointer-events-none absolute inset-x-2 top-1/2 z-10 -translate-y-1/2 rounded-xl border border-accent/50 bg-accent/[.06]"
+        style={{ height: ITEM_H }}
+      />
+      {/* Top & bottom fades */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-2/5 bg-gradient-to-b from-[#0c121d] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-2/5 bg-gradient-to-t from-[#0c121d] to-transparent" />
+
+      <div
+        ref={ref}
+        onScroll={onScroll}
+        className="no-scrollbar h-full overflow-y-scroll"
+        style={{ scrollSnapType: "y mandatory" }}
+      >
+        <div style={{ height: ITEM_H * PAD_ITEMS }} />
+        {values.map((v, i) => {
+          const dist = Math.abs(i - centre);
+          const cls = dist === 0
+            ? "text-accent text-[34px] font-extrabold"
+            : dist === 1
+            ? "text-ink/70 text-[24px] font-semibold"
+            : "text-muted/50 text-[20px] font-medium";
+          return (
+            <div
+              key={v}
+              onClick={() => jump(i - centre)}
+              className={`flex cursor-pointer items-center justify-center tabular-nums transition-all duration-100 ${cls}`}
+              style={{ height: ITEM_H, scrollSnapAlign: "center" }}
+            >
+              {renderLabel(v)}
+            </div>
+          );
+        })}
+        <div style={{ height: ITEM_H * PAD_ITEMS }} />
+      </div>
+    </div>
   );
 }
 

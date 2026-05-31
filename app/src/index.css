@@ -21,3 +21,12 @@ input[type="range"] {
   cursor: pointer;
   accent-color: var(--acc, #2fe6a6);
 }
+
+/* Hide the scrollbar (used by the wheel pickers) without losing scroll/touch. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

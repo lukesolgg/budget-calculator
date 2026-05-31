@@ -26,7 +26,7 @@ function Shell() {
 
   return (
     <div className="mx-auto max-w-[1240px] px-6 pb-16 pt-8">
-      <Account openSignal={signInSignal} showBar={screen !== "welcome"} />
+      <Account openSignal={signInSignal} showBar={screen !== "welcome"} onLogout={() => go("welcome")} />
       {screen === "welcome" && (
         <Welcome
           onNew={() => (hasDraft ? go("dashboard") : go("wizard"))}

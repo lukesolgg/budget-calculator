@@ -5,7 +5,7 @@ import { usePlanner, toStored, fromStored } from "../state.jsx";
 
 // Account bar (top-right) + auth modal. Handles signup/login/save and syncs
 // the planner state to the cloud.
-export default function Account({ openSignal, showBar = true }) {
+export default function Account({ openSignal, showBar = true, onLogout }) {
   const { state, setState } = usePlanner();
   const [session, setSession] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem("dfp_session") || "null"); } catch { return null; }
@@ -47,10 +47,10 @@ export default function Account({ openSignal, showBar = true }) {
               : <span className="inline-flex items-center gap-1.5 text-[12px] text-good"><span className="h-2 w-2 rounded-full bg-good" />All changes saved</span>}
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-good" />{session.username}</span>
             <Button onClick={doSave} className={`px-3.5 py-2 text-[13px] ${dirty ? "shadow-[0_0_0_2px_rgba(240,184,106,.5),0_6px_18px_rgba(18,184,134,.35)]" : ""}`}>Save progress</Button>
-            <Button variant="ghost" onClick={() => { persistSession(null); flash("Logged out"); }} className="px-3.5 py-2 text-[13px]">Log out</Button>
+            <Button variant="ghost" onClick={() => { persistSession(null); flash("Logged out"); onLogout?.(); }} className="px-3.5 py-2 text-[13px]">Log out</Button>
           </>
         ) : (
-          <Button variant="ghost" onClick={() => setModal("login")} className="px-3.5 py-2 text-[13px]">Sign in / Sign up</Button>
+          <Button variant="ghost" onClick={() => onLogout?.()} className="px-3.5 py-2 text-[13px]">Log out</Button>
         )}
       </div>
       )}
