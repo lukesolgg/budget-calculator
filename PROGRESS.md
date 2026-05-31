@@ -64,6 +64,14 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Debt/budget UX polish (verified): Results = donut left + stats panel right
+  (per-plan debt-free rows), interest panel below cards, compare table removed,
+  selected plan remembered (schema 3: plan namespace). Detail = milestones right
+  (roadmap removed), lockable sliders w/ Edit (saved to profile), 0% badge
+  colour-coded by months left (<=3 red/<=6 orange/6+ green). Dashboard Debt card
+  border = plan colour (green/orange/red), green if fully debt-free; CTA flips to
+  "View my plan".
+- Job dataset live: 369 UK occupations (ONS ASHE Table 14, 4-digit SOC) + search.
 - Reference data: src/data/savings.js (UK accounts) + jobs.js placeholder.
 - Foundation refactor (Option A): versioned/namespaced persistence + migration.
 - Dashboard hub: stat header + section cards (debt live, others coming soon).
