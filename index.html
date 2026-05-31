@@ -356,6 +356,33 @@
   .sched-table td:first-child { color: var(--muted); }
   .sched-table .done { color: #4ade80; font-weight: 600; }
 
+  /* ---------- Account bar & auth modal ---------- */
+  .account-bar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; min-height: 36px; }
+  .acct-user { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: var(--text); font-weight: 600; }
+  .acct-user .dotg { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+  .acct-status { font-size: 12px; color: var(--muted); }
+  .btn-sm { padding: 8px 14px; font-size: 13px; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(4,7,12,.72); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .modal { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 18px; padding: 26px; width: 100%; max-width: 440px; position: relative; }
+  .modal h3 { margin: 0 0 4px; font-size: 21px; }
+  .modal .sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+  .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; }
+  .modal-close:hover { color: var(--text); }
+  .modal label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
+  .modal input[type=text] { width: 100%; background: #0c121d; border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 12px 14px; font-size: 16px; outline: none; margin-bottom: 16px; }
+  .modal input[type=text]:focus { border-color: var(--accent); }
+  .auth-tabs { display: flex; gap: 6px; margin-bottom: 20px; background: #0c121d; border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+  .auth-tab { flex: 1; text-align: center; padding: 9px; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--muted); border: none; background: none; }
+  .auth-tab.active { background: #1c2738; color: var(--text); }
+  .modal .full { width: 100%; justify-content: center; }
+  .auth-err { color: #f87171; font-size: 13px; margin: -6px 0 14px; min-height: 16px; }
+  .code-box { background: #0c121d; border: 1px dashed #2f6fe0; border-radius: 12px; padding: 18px; text-align: center; margin: 4px 0 16px; }
+  .code-box .code { font-size: 26px; font-weight: 800; letter-spacing: 2px; color: #4ea8ff; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .code-box .cap { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .code-warn { background: #1c1407; border: 1px solid #5a3d12; color: #f0b86a; border-radius: 10px; padding: 11px 13px; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+  .backend-note { font-size: 11px; color: var(--muted); text-align: center; margin-top: 14px; }
+
   @media (max-width: 900px) {
     .plans-grid { grid-template-columns: 1fr; }
     .debt-row { grid-template-columns: 1fr 1fr; }
@@ -370,6 +397,15 @@
 </head>
 <body>
   <div class="wrap">
+
+    <!-- Account bar (always visible) -->
+    <div class="account-bar" id="accountBar">
+      <span class="acct-status" id="acctStatus"></span>
+      <span class="acct-user" id="acctUser" style="display:none;"><span class="dotg"></span><span id="acctUserName"></span></span>
+      <button id="saveBtn" class="btn btn-primary btn-sm" type="button" style="display:none;">Save progress</button>
+      <button id="loginBtn" class="btn btn-ghost btn-sm" type="button">Sign in / Sign up</button>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm" type="button" style="display:none;">Log out</button>
+    </div>
 
     <!-- ============ SCREEN 1: INPUTS (debts + budget) ============ -->
     <section id="screen-inputs" class="screen active">
@@ -622,6 +658,31 @@
       </section>
     </section>
 
+  </div>
+
+  <!-- ============ AUTH MODAL ============ -->
+  <div id="authModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <button class="modal-close" id="authClose" type="button" aria-label="Close">&times;</button>
+      <h3 id="authTitle">Welcome back</h3>
+      <p class="sub">Anonymous accounts — just a username &amp; PIN. Save your plan and pick up on any device.</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" type="button">Sign in</button>
+        <button class="auth-tab" id="tabSignup" type="button">Create account</button>
+      </div>
+
+      <label for="authUser">Username</label>
+      <input id="authUser" type="text" autocomplete="off" maxlength="24" placeholder="e.g. luke_money" />
+
+      <label for="authPin">PIN (4–6 digits)</label>
+      <input id="authPin" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="••••" />
+
+      <div class="auth-err" id="authErr"></div>
+
+      <button class="btn btn-primary full" id="authSubmit" type="button">Sign in</button>
+      <div class="backend-note" id="backendNote"></div>
+    </div>
   </div>
 
 <script>
@@ -1929,6 +1990,251 @@
     if (!out) return;
     rasterize(out.svg, out.W, out.H, `my-payoff-plan-${new Date().toISOString().slice(0, 10)}.png`, this);
   });
+
+  // ===========================================================================
+  // ACCOUNTS  (Supabase if configured, otherwise local-browser fallback)
+  // ===========================================================================
+  // ▼▼▼ PASTE YOUR SUPABASE DETAILS HERE TO ENABLE REAL CROSS-DEVICE ACCOUNTS ▼▼▼
+  const SUPABASE_URL = "";       // e.g. "https://abcd1234.supabase.co"
+  const SUPABASE_ANON_KEY = "";  // your project's anon/public key
+  // ▲▲▲ Until both are filled in, accounts are saved in this browser only. ▲▲▲
+
+  // Supabase is loaded lazily (only if keys are set) so local mode pulls no
+  // external scripts. `sb` is filled in by initSupabase() on first page load.
+  const useSupabase = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+  let sb = null;
+  function initSupabase() {
+    if (!useSupabase) return;
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    s.onload = () => { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); };
+    document.head.appendChild(s);
+  }
+
+  // --- Storage backend abstraction -----------------------------------------
+  // Each method returns { ok, data?, error? }.
+  const backend = {
+    async signup(username, pin, data) {
+      if (useSupabase) {
+        const { data: r, error } = await sb.rpc("signup_account", { p_username: username, p_pin: pin, p_data: data });
+        if (error) return { ok: false, error: error.message };
+        if (r === "EXISTS") return { ok: false, error: "That username is taken — try another or sign in." };
+        return { ok: true };
+      }
+      const accts = lsAccounts();
+      if (accts[username]) return { ok: false, error: "That username is taken — try another or sign in." };
+      accts[username] = { pin: lsHash(pin), data };
+      lsSave(accts);
+      return { ok: true };
+    },
+    async login(username, pin) {
+      if (useSupabase) {
+        const { data: r, error } = await sb.rpc("login_account", { p_username: username, p_pin: pin });
+        if (error) return { ok: false, error: error.message };
+        if (r === "BAD") return { ok: false, error: "Wrong username or PIN." };
+        return { ok: true, data: r };
+      }
+      const accts = lsAccounts();
+      const a = accts[username];
+      if (!a || a.pin !== lsHash(pin)) return { ok: false, error: "Wrong username or PIN." };
+      return { ok: true, data: a.data };
+    },
+    async save(username, pin, data) {
+      if (useSupabase) {
+        const { data: r, error } = await sb.rpc("save_data", { p_username: username, p_pin: pin, p_data: data });
+        if (error) return { ok: false, error: error.message };
+        if (r === "BAD") return { ok: false, error: "Session expired — please sign in again." };
+        return { ok: true };
+      }
+      const accts = lsAccounts();
+      const a = accts[username];
+      if (!a || a.pin !== lsHash(pin)) return { ok: false, error: "Session expired — please sign in again." };
+      a.data = data; lsSave(accts);
+      return { ok: true };
+    },
+  };
+
+  // local-fallback helpers
+  function lsAccounts() { try { return JSON.parse(localStorage.getItem("dfp_accounts") || "{}"); } catch { return {}; } }
+  function lsSave(a) { localStorage.setItem("dfp_accounts", JSON.stringify(a)); }
+  function lsHash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return "h" + h; }
+
+  // --- Capture / restore the whole form as a snapshot ----------------------
+  function collectState() {
+    const expenses = {};
+    rowsEl.querySelectorAll("input").forEach((i) => { if (i.value !== "") expenses[i.dataset.key] = i.value; });
+    const debts = [...debtRowsEl.querySelectorAll(".debt-item")].map((it) => ({
+      name: it.querySelector(".d-name").value,
+      bal:  it.querySelector(".d-bal").value,
+      min:  it.querySelector(".d-min").value,
+      rate: it.querySelector(".d-rate").value,
+      iffree: it.querySelector(".d-iffree").checked,
+      ifuntil: it.querySelector(".d-ifuntil").value,
+    }));
+    return {
+      v: 1,
+      income: incomeEl.value,
+      expenses, debts,
+      mortgage: { on: mortgageToggle.checked, payment: mortgagePaymentEl.value,
+        balance: document.getElementById("mortgageBalance").value, rate: document.getElementById("mortgageRate").value },
+      car: { on: carLoanToggle.checked, balance: document.getElementById("carBalance").value,
+        payment: document.getElementById("carPayment").value, rate: document.getElementById("carRate").value },
+      savings: { total: savingsTotalEl.value, use: savingsUseEl.value },
+    };
+  }
+
+  function applyState(s) {
+    if (!s) return;
+    incomeEl.value = s.income || "";
+    rowsEl.querySelectorAll("input").forEach((i) => { i.value = (s.expenses && s.expenses[i.dataset.key]) || ""; });
+
+    // rebuild debt rows
+    debtRowsEl.innerHTML = "";
+    const debts = (s.debts && s.debts.length) ? s.debts : [null];
+    debts.forEach((d) => {
+      addDebtRow();
+      const it = debtRowsEl.lastElementChild;
+      if (!d) return;
+      it.querySelector(".d-name").value = d.name || "";
+      it.querySelector(".d-bal").value = d.bal || "";
+      it.querySelector(".d-min").value = d.min || "";
+      it.querySelector(".d-rate").value = d.rate || "";
+      if (d.iffree) {
+        const chk = it.querySelector(".d-iffree");
+        chk.checked = true; chk.dispatchEvent(new Event("change", { bubbles: true }));
+        it.querySelector(".d-ifuntil").value = d.ifuntil || "";
+      }
+    });
+
+    // mortgage
+    const m = s.mortgage || {};
+    mortgageToggle.checked = !!m.on; mortgageToggle.dispatchEvent(new Event("change", { bubbles: true }));
+    mortgagePaymentEl.value = m.payment || "";
+    document.getElementById("mortgageBalance").value = m.balance || "";
+    document.getElementById("mortgageRate").value = m.rate || "";
+
+    // car
+    const c = s.car || {};
+    carLoanToggle.checked = !!c.on; carLoanToggle.dispatchEvent(new Event("change", { bubbles: true }));
+    document.getElementById("carBalance").value = c.balance || "";
+    document.getElementById("carPayment").value = c.payment || "";
+    document.getElementById("carRate").value = c.rate || "";
+
+    // savings
+    const sv = s.savings || {};
+    savingsTotalEl.value = sv.total || "";
+    savingsTotalEl.dispatchEvent(new Event("input", { bubbles: true }));
+    savingsUseEl.value = sv.use || "";
+
+    refreshDebts();
+    render();
+  }
+
+  // --- Session + UI --------------------------------------------------------
+  let session = null; // { username, pin }
+  const $ = (id) => document.getElementById(id);
+
+  function restoreSession() {
+    try { session = JSON.parse(sessionStorage.getItem("dfp_session") || "null"); } catch { session = null; }
+    updateAccountBar();
+  }
+  function setSession(username, pin) {
+    session = { username, pin };
+    sessionStorage.setItem("dfp_session", JSON.stringify(session));
+    updateAccountBar();
+  }
+  function clearSession() {
+    session = null; sessionStorage.removeItem("dfp_session"); updateAccountBar();
+  }
+
+  function updateAccountBar() {
+    const loggedIn = !!session;
+    $("acctUser").style.display = loggedIn ? "" : "none";
+    $("saveBtn").style.display = loggedIn ? "" : "none";
+    $("logoutBtn").style.display = loggedIn ? "" : "none";
+    $("loginBtn").style.display = loggedIn ? "none" : "";
+    if (loggedIn) $("acctUserName").textContent = session.username;
+    $("acctStatus").textContent = useSupabase ? "" : "Saved in this browser";
+  }
+
+  // --- Auth modal ----------------------------------------------------------
+  let authMode = "login";
+  function openAuth(mode) {
+    authMode = mode;
+    $("tabLogin").classList.toggle("active", mode === "login");
+    $("tabSignup").classList.toggle("active", mode === "signup");
+    $("authTitle").textContent = mode === "login" ? "Welcome back" : "Create your account";
+    $("authSubmit").textContent = mode === "login" ? "Sign in" : "Create account & save";
+    $("authErr").textContent = "";
+    $("backendNote").textContent = useSupabase
+      ? "Synced securely across devices."
+      : "Demo mode: saved in this browser only. (Add Supabase keys for cross-device sync.)";
+    $("authModal").style.display = "flex";
+    $("authUser").focus();
+  }
+  function closeAuth() { $("authModal").style.display = "none"; }
+
+  $("loginBtn").addEventListener("click", () => openAuth("login"));
+  $("authClose").addEventListener("click", closeAuth);
+  $("authModal").addEventListener("click", (e) => { if (e.target === $("authModal")) closeAuth(); });
+  $("tabLogin").addEventListener("click", () => openAuth("login"));
+  $("tabSignup").addEventListener("click", () => openAuth("signup"));
+  $("authPin").addEventListener("input", (e) => { e.target.value = e.target.value.replace(/\D/g, ""); });
+
+  $("authSubmit").addEventListener("click", async () => {
+    const username = $("authUser").value.trim().toLowerCase();
+    const pin = $("authPin").value.trim();
+    const err = $("authErr");
+    err.textContent = "";
+    if (!/^[a-z0-9_]{3,24}$/.test(username)) { err.textContent = "Username: 3–24 letters, numbers or underscores."; return; }
+    if (!/^\d{4,6}$/.test(pin)) { err.textContent = "PIN must be 4–6 digits."; return; }
+
+    const btn = $("authSubmit");
+    btn.disabled = true; const prev = btn.textContent; btn.textContent = "Please wait…";
+    try {
+      if (authMode === "signup") {
+        const res = await backend.signup(username, pin, collectState());
+        if (!res.ok) { err.textContent = res.error; return; }
+        setSession(username, pin);
+        closeAuth();
+        flashStatus("Account created — progress saved ✓");
+      } else {
+        const res = await backend.login(username, pin);
+        if (!res.ok) { err.textContent = res.error; return; }
+        setSession(username, pin);
+        if (res.data) applyState(res.data);
+        closeAuth();
+        flashStatus("Signed in — plan loaded ✓");
+      }
+    } catch (e) {
+      err.textContent = "Something went wrong. Please try again.";
+    } finally {
+      btn.disabled = false; btn.textContent = prev;
+    }
+  });
+
+  $("saveBtn").addEventListener("click", async () => {
+    if (!session) return;
+    const btn = $("saveBtn"); btn.disabled = true; const prev = btn.textContent; btn.textContent = "Saving…";
+    const res = await backend.save(session.username, session.pin, collectState());
+    btn.disabled = false; btn.textContent = prev;
+    if (res.ok) flashStatus("Progress saved ✓");
+    else { flashStatus(res.error || "Save failed", true); if (/sign in/i.test(res.error || "")) clearSession(); }
+  });
+
+  $("logoutBtn").addEventListener("click", () => { clearSession(); flashStatus("Logged out"); });
+
+  let flashTimer = null;
+  function flashStatus(msg, isErr) {
+    const el = $("acctStatus");
+    el.textContent = msg;
+    el.style.color = isErr ? "#f87171" : "#4ade80";
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => { el.style.color = ""; updateAccountBar(); }, 2600);
+  }
+
+  initSupabase();
+  restoreSession();
 </script>
 </body>
 </html>
