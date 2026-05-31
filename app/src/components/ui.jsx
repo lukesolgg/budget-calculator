@@ -15,9 +15,9 @@ export function Button({ variant = "primary", className = "", children, ...props
   );
 }
 
-export function Card({ className = "", children }) {
+export function Card({ className = "", style, children }) {
   return (
-    <section className={`rounded-2xl border border-border bg-gradient-to-b from-panel to-panel2 p-6 ${className}`}>
+    <section style={style} className={`rounded-2xl border border-border bg-gradient-to-b from-panel to-panel2 p-6 ${className}`}>
       {children}
     </section>
   );

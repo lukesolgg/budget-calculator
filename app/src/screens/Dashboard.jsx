@@ -38,6 +38,11 @@ export default function Dashboard({ onOpenDebt, onEdit }) {
 
   const greeting = `${hello()},`;
 
+  // Debt & budget card border: by chosen plan, or green if fully debt-free.
+  const completelyDebtFree = debts.length === 0 && !state.mortgage.on;
+  const planTone = { balanced: "green", accelerated: "orange", avalanche: "red" }[state.selectedPlan] || null;
+  const debtBorder = planTone || (completelyDebtFree ? "green" : null);
+
   return (
     <div className="mx-auto max-w-[1100px]">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -66,7 +71,8 @@ export default function Dashboard({ onOpenDebt, onEdit }) {
           desc={debts.length
             ? `${debts.length} debt${debts.length > 1 ? "s" : ""} · clear them in ${debtFree}. See your tailored payoff plan.`
             : "You're debt-free — see your budget breakdown and savings focus."}
-          cta="Open my plan" onClick={onOpenDebt}
+          cta={state.selectedPlan ? "View my plan" : "Open my plan"} onClick={onOpenDebt}
+          borderTone={debtBorder}
         />
         <SectionCard
           emoji="💷" title="Best UK savings"
@@ -114,9 +120,11 @@ function Stat({ label, value, tone }) {
   );
 }
 
-function SectionCard({ live, emoji, title, desc, cta, onClick }) {
+function SectionCard({ live, emoji, title, desc, cta, onClick, borderTone }) {
+  const toneColor = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" }[borderTone];
   return (
     <Card
+      style={toneColor ? { borderColor: toneColor, boxShadow: `0 0 0 1px ${toneColor}, 0 14px 36px -20px ${toneColor}` } : undefined}
       className={`relative flex flex-col ${live ? "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-[0_12px_34px_-16px_rgba(47,230,166,.6)]" : ""}`}
     >
       {!live && (
