@@ -1527,11 +1527,14 @@
 
   const funCapOf = (income) => income * 0.30;
 
-  // Default split of the spare-cash pool: no extra debt, fun & savings 50/50
-  // (fun capped at 30% of income).
-  function defaultAlloc(income, leftover) {
-    let fun = Math.min(leftover / 2, funCapOf(income));
-    return { fun, savings: Math.max(0, leftover - fun), extra: 0 };
+  // Default split of the spare-cash pool. The "extra debt" slider starts at the
+  // chosen plan's level (avalanche = all of it), then whatever's left over is
+  // split fun & savings 50/50 (fun capped at 30% of income).
+  function defaultAlloc(income, pool, plan) {
+    let extra = Math.max(0, Math.min(pool, pool * (plan ? plan.def.share : 0)));
+    const rest = Math.max(0, pool - extra);
+    let fun = Math.min(rest / 2, funCapOf(income));
+    return { fun, savings: Math.max(0, rest - fun), extra };
   }
 
   // When one slider moves, rebalance the other two so all three still sum to
@@ -1592,15 +1595,20 @@
     CATEGORIES.forEach((c) => { living += vals[c.key] || 0; });
     living += vals.mortgage || 0;
 
-    const baseToDebt = Math.min(plan.monthly, Math.max(0, income - living)); // the plan's debt payment
-    const leftover = Math.max(0, income - living - baseToDebt);              // spare-cash pool
+    // Baseline = the minimum payments on all debts. The surplus above that is
+    // the pool the three sliders distribute (extra-debt / fun / savings), so
+    // every plan — including Avalanche — gets sliders.
+    const avail = Math.max(0, income - living);
+    const minTotal = debts.reduce((s, d) => s + d.min, 0);
+    const baseToDebt = Math.min(minTotal, avail);
+    const pool = Math.max(0, avail - baseToDebt);
 
-    detailCtx = { plan, debts, income, lump, living, baseToDebt, leftover };
-    alloc = defaultAlloc(income, leftover);
+    detailCtx = { plan, debts, income, lump, living, baseToDebt, leftover: pool };
+    alloc = defaultAlloc(income, pool, plan);
 
     const wrap = document.getElementById("funSliderWrap");
-    wrap.style.display = leftover > 0.5 ? "" : "none";
-    document.getElementById("poolLbl").textContent = fmt(leftover);
+    wrap.style.display = pool > 0.5 ? "" : "none";
+    document.getElementById("poolLbl").textContent = fmt(pool);
     syncSliders();
 
     renderDetail();
@@ -1636,8 +1644,9 @@
       `<span><span class="amt">${fmt(a.value)}</span><span class="pc">${income > 0 ? Math.round(a.value / income * 100) : 0}%</span></span></div>`
     ).join("");
 
-    // --- Payoff simulation using the plan's extra PLUS any slider extra.
-    const effExtra = plan.extra + extraDebt;
+    // --- Payoff simulation. baseToDebt is the minimums, so the spare cash sent
+    // to debt is exactly the slider's "extra" amount.
+    const effExtra = extraDebt;
     const sim = simulateDetailed(debts, effExtra, lump);
 
     const orderEl = document.getElementById("payoffOrder");
