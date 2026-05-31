@@ -28,7 +28,9 @@ plans, weekly planner, investments, second-job suggestions.
   feature's data: add a namespace in serialize/deserialize + bump schema + add a
   migration branch. Old saves auto-migrate. (regression-tested)
 - `app/src/data/` — REFERENCE data (shared, read-only, NOT in user profiles):
-  savings.js (UK accounts, live), jobs.js (ONS ASHE placeholder).
+  savings.js (UK accounts, live), jobs.js (369 UK occupations from ONS ASHE
+  Table 14, 4-digit SOC, annual+hourly medians + searchJobs()). Regenerate via
+  app/scripts/build-jobs.cjs (reads rawdata/table14/*.xlsx, gitignored).
 - `data-raw/` — gitignored drop folder for raw source files to clean (ASHE zip).
 - `app/src/lib/accounts.js` — Supabase (username+PIN) w/ local fallback. Keys
   in this file. Schema/setup in SUPABASE_SETUP.md.
