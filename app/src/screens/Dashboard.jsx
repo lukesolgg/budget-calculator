@@ -91,6 +91,14 @@ export default function Dashboard({ onOpenDebt, onEdit }) {
           desc="Simple, lower-risk options (index funds, gold, bonds) with plain-English projections."
         />
         <SectionCard
+          emoji="🎓" title="Further education"
+          desc="Courses and qualifications that boost your earning power — with the time and cost mapped against the payoff."
+        />
+        <SectionCard
+          emoji="👴" title="Pensions"
+          desc="Understand your workplace and private pensions, and see how small top-ups grow into a bigger retirement."
+        />
+        <SectionCard
           emoji="✨" title="More coming"
           desc="Orcl. is pre-alpha and growing fast. New systems to fast-track your success are on the way."
         />
