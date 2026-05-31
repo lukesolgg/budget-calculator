@@ -18,9 +18,13 @@ function Shell() {
 
   return (
     <div className="mx-auto max-w-[1240px] px-6 pb-16 pt-8">
-      <Account openSignal={signInSignal} />
+      <Account openSignal={signInSignal} showBar={screen !== "welcome"} />
       {screen === "welcome" && (
-        <Welcome onNew={() => go("wizard")} onReturn={() => setSignInSignal((n) => n + 1)} onContinue={() => go("inputs")} canContinue={hasDraft} />
+        <Welcome
+          onNew={() => (hasDraft ? go("inputs") : go("wizard"))}
+          onReturn={() => setSignInSignal((n) => n + 1)}
+          hasDraft={hasDraft}
+        />
       )}
       {screen === "wizard" && (
         <Wizard onDone={() => go("inputs")} onExitTop={() => go("welcome")} />

@@ -5,7 +5,7 @@ import { usePlanner, initialState } from "../state.jsx";
 
 // Account bar (top-right) + auth modal. Handles signup/login/save and syncs
 // the planner state to the cloud.
-export default function Account({ openSignal }) {
+export default function Account({ openSignal, showBar = true }) {
   const { state, setState } = usePlanner();
   const [session, setSession] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem("dfp_session") || "null"); } catch { return null; }
@@ -37,6 +37,7 @@ export default function Account({ openSignal }) {
 
   return (
     <>
+      {showBar && (
       <div className="mb-2.5 flex min-h-[36px] flex-wrap items-center justify-end gap-2.5">
         {status && <span className="text-[12px] text-good">{status}</span>}
         {session ? (
@@ -52,6 +53,7 @@ export default function Account({ openSignal }) {
           <Button variant="ghost" onClick={() => setModal("login")} className="px-3.5 py-2 text-[13px]">Sign in / Sign up</Button>
         )}
       </div>
+      )}
 
       {modal && (
         <AuthModal
