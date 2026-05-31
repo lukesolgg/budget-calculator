@@ -5,8 +5,8 @@ export function Button({ variant = "primary", className = "", children, ...props
     "inline-flex items-center justify-center gap-2 rounded-xl font-semibold cursor-pointer transition active:translate-y-px disabled:opacity-40 disabled:cursor-default";
   const sizes = "px-[18px] py-[10px] text-sm";
   const variants = {
-    primary: "text-white bg-gradient-to-b from-[#3b86ff] to-[#246cf0] shadow-[0_6px_18px_rgba(36,108,240,.35)] hover:brightness-110",
-    ghost: "text-ink bg-[#1a2230] border border-border hover:brightness-125",
+    primary: "text-[#04140d] bg-gradient-to-b from-[#2fe6a6] to-[#12b886] shadow-[0_6px_18px_rgba(18,184,134,.35)] hover:brightness-110",
+    ghost: "text-ink bg-[#101a18] border border-[#1e2b27] hover:brightness-125",
   };
   return (
     <button className={`${base} ${sizes} ${variants[variant]} ${className}`} {...props}>
