@@ -3,3 +3,5 @@
 # Raw source data (clean into app/src/data/* — keep only the README)
 data-raw/*
 !data-raw/README.md
+
+rawdata/
