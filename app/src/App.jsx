@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlannerProvider } from "./state.js";
+import { PlannerProvider } from "./state.jsx";
 import Welcome from "./screens/Welcome.jsx";
 import Wizard from "./screens/Wizard.jsx";
 

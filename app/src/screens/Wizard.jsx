@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Choice, MoneyInput, Chevron } from "../components/ui.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, DEBT_PLACEHOLDERS, MAX_DEBTS,
-} from "../state.js";
+} from "../state.jsx";
 import { fmt } from "../lib/engine.js";
 
 const STEPS = ["freq", "income", "mortgage", "car", "debts"];
