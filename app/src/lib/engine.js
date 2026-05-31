@@ -233,6 +233,22 @@ export function projectRetirement({
   };
 }
 
+// Generic savings-account growth: start with `lump`, add `monthly` each month,
+// compound monthly at `annualRate` for `years`. Returns final balance,
+// contributions, interest, and a yearly series for charting.
+export function projectSavings({ lump = 0, monthly = 0, annualRate = 0.045, years = 5 }) {
+  const months = Math.max(0, Math.round(years * 12));
+  const mRate = annualRate / 12;
+  let bal = lump, contributed = lump;
+  const yearly = [{ year: 0, balance: bal, contributed }];
+  for (let m = 1; m <= months; m++) {
+    bal += bal * mRate;
+    bal += monthly; contributed += monthly;
+    if (m % 12 === 0) yearly.push({ year: m / 12, balance: bal, contributed });
+  }
+  return { balance: bal, contributed, interest: bal - contributed, yearly };
+}
+
 // For an interest-free debt: payment needed to clear in time, and the
 // least-interest fallback if that's unaffordable.
 export function projectInterestFreeShortfall(d, payment) {

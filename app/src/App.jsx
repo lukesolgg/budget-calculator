@@ -4,6 +4,7 @@ import Welcome from "./screens/Welcome.jsx";
 import Wizard from "./screens/Wizard.jsx";
 import Inputs from "./screens/Inputs.jsx";
 import Dashboard from "./screens/Dashboard.jsx";
+import Savings from "./screens/Savings.jsx";
 import Results from "./screens/Results.jsx";
 import Detail from "./screens/Detail.jsx";
 import Account from "./components/Account.jsx";
@@ -39,7 +40,10 @@ function Shell() {
         <Inputs onBack={() => go("wizard")} onResults={() => go("dashboard")} onEdit={() => go("wizard")} />
       )}
       {screen === "dashboard" && (
-        <Dashboard onOpenDebt={() => go("results")} onEdit={() => go("inputs")} />
+        <Dashboard onOpenDebt={() => go("results")} onEdit={() => go("inputs")} onOpenSavings={() => go("savings")} />
+      )}
+      {screen === "savings" && (
+        <Savings onBack={() => go("dashboard")} />
       )}
       {screen === "results" && (
         <Results onBack={() => go("dashboard")} onPickPlan={(k) => { setPlanKey(k); go("detail"); }} />

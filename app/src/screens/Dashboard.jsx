@@ -6,7 +6,7 @@ import {
 import { fmt, monthsToStr, buildPlans, projectRetirement } from "../lib/engine.js";
 
 // The hub. Stat header + section cards (debt live, others "coming soon").
-export default function Dashboard({ onOpenDebt, onEdit }) {
+export default function Dashboard({ onOpenDebt, onEdit, onOpenSavings }) {
   const { state } = usePlanner();
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
@@ -75,8 +75,9 @@ export default function Dashboard({ onOpenDebt, onEdit }) {
           borderTone={debtBorder}
         />
         <SectionCard
-          emoji="💷" title="Best UK savings"
+          live emoji="💷" title="Best UK savings"
           desc="Top high-yield savings accounts and how your spare cash could grow. Forecasted with real UK rates."
+          cta="Explore savings" onClick={onOpenSavings}
         />
         <SectionCard
           emoji="🚀" title="Career & income"
