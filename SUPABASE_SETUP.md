@@ -15,8 +15,8 @@ below → **Run**. This creates the accounts table, locks it down so nobody can
 read it directly, and adds three secure functions the app calls.
 
 ```sql
--- PIN hashing
-create extension if not exists pgcrypto;
+-- PIN hashing (Supabase keeps extensions in the "extensions" schema)
+create extension if not exists pgcrypto with schema extensions;
 
 -- Accounts table: username + hashed PIN + their saved plan (JSON)
 create table if not exists public.accounts (
@@ -33,7 +33,7 @@ alter table public.accounts enable row level security;
 
 -- Sign up: returns 'OK' or 'EXISTS'
 create or replace function public.signup_account(p_username text, p_pin text, p_data jsonb)
-returns text language plpgsql security definer set search_path = public as $$
+returns text language plpgsql security definer set search_path = public, extensions as $$
 begin
   if exists (select 1 from accounts where username = lower(p_username)) then
     return 'EXISTS';
@@ -45,7 +45,7 @@ end; $$;
 
 -- Log in: returns the saved data (jsonb) or 'BAD' if wrong username/PIN
 create or replace function public.login_account(p_username text, p_pin text)
-returns jsonb language plpgsql security definer set search_path = public as $$
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
 declare rec accounts;
 begin
   select * into rec from accounts where username = lower(p_username);
@@ -57,7 +57,7 @@ end; $$;
 
 -- Save: returns 'OK' or 'BAD'
 create or replace function public.save_data(p_username text, p_pin text, p_data jsonb)
-returns text language plpgsql security definer set search_path = public as $$
+returns text language plpgsql security definer set search_path = public, extensions as $$
 declare rec accounts;
 begin
   select * into rec from accounts where username = lower(p_username);
