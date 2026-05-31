@@ -3,7 +3,7 @@ import Donut from "../components/Donut.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, savingsToDeployOf, expenseItemsOf,
 } from "../state.jsx";
-import { fmt, monthsToStr, buildPlans, projectInterestFreeShortfall } from "../lib/engine.js";
+import { fmt, monthsToStr, buildPlans } from "../lib/engine.js";
 
 const COLOR_BY = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 
@@ -81,9 +81,6 @@ export default function Results({ onBack, onPickPlan }) {
               <PlanCard key={x.def.key} x={x} selected={state.selectedPlan === x.def.key} onPick={() => pick(x.def.key)} />
             ))}
           </div>
-
-          {/* Interest-free panel now sits BELOW the plan cards */}
-          <InterestFreePanel debts={debts} available={available} />
         </>
       )}
     </div>
@@ -160,46 +157,6 @@ function DebtFree({ income, living, available }) {
         <div className="text-center"><div className="text-[22px] font-bold">{fmt(living)}</div><div className="mt-1 text-[12px] uppercase tracking-[.07em] text-muted">Living costs</div></div>
         <div className="text-center"><div className="text-[22px] font-bold text-good">{fmt(available)}</div><div className="mt-1 text-[12px] uppercase tracking-[.07em] text-muted">Spare to save / invest</div></div>
       </div>
-    </Card>
-  );
-}
-
-function InterestFreePanel({ debts, available }) {
-  const free = debts.filter((d) => d.freeMonths > 0);
-  if (!free.length) return null;
-  return (
-    <Card className="mx-auto mt-7 max-w-[940px]">
-      <h3 className="mb-1 text-lg font-bold">⏳ Beat the interest deadline</h3>
-      <p className="mb-[18px] text-[13px] text-muted">How to clear your 0% debts before the interest kicks in — or pay the least interest if money's tight.</p>
-      {free.map((d, i) => {
-        const otherMins = debts.reduce((s, x) => s + (x === d ? 0 : x.min), 0);
-        const maxAfford = Math.max(0, available - otherMins);
-        const needed = d.balance / d.freeMonths;
-        const onTrack = maxAfford + 1e-6 >= needed;
-        return (
-          <div key={i} className="mb-3.5 rounded-xl border border-border bg-[#0c121d] p-4 last:mb-0">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <span className="text-base font-bold">{d.name}</span>
-              <span className={`rounded-full border px-2.5 py-0.5 text-[12px] font-bold ${onTrack ? "border-[#1f5c3a] bg-[#11301f] text-good" : "border-[#5a3d12] bg-[#1c1407] text-warn"}`}>
-                {onTrack ? "✓ Beatable" : "⚠ Tight — minimise interest"}
-              </span>
-            </div>
-            <div className="mt-1 text-[13px] text-muted">{fmt(d.balance)} at 0% for {d.freeMonths} more month{d.freeMonths === 1 ? "" : "s"}, then {d.rate}%</div>
-            {onTrack ? (
-              <p className="mt-3 border-t border-dashed border-border pt-3 text-[13px] leading-relaxed text-muted">
-                Put <b className="text-ink">{fmt(needed)}/mo</b> on {d.name} for the next <b className="text-ink">{d.freeMonths} months</b> and it's gone the month before any interest is charged — <b className="text-ink">£0 interest</b>.
-              </p>
-            ) : (() => {
-              const proj = projectInterestFreeShortfall(d, maxAfford);
-              return (
-                <p className="mt-3 border-t border-dashed border-border pt-3 text-[13px] leading-relaxed text-muted">
-                  You can't fully clear {d.name} before the 0% ends. Best move: pay the <b className="text-ink">most you can ({fmt(maxAfford)}/mo)</b> during the 0% window — that leaves <b className="text-ink">{fmt(proj.leftover)}</b> when interest starts, costing about <b className="text-ink">{fmt(proj.interest)}</b> (vs {fmt(proj.interestIfMinOnly)} if you only paid the minimum). Freeing up an extra <b className="text-ink">{fmt(needed - maxAfford)}/mo</b> would wipe out the interest.
-                </p>
-              );
-            })()}
-          </div>
-        );
-      })}
     </Card>
   );
 }

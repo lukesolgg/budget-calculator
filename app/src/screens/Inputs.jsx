@@ -13,8 +13,6 @@ export default function Inputs({ onBack, onResults, onEdit }) {
 
   const setExpense = (key, v) =>
     update((s) => ({ ...s, expenses: { ...s.expenses, [key]: v } }));
-  const setSavings = (patch) =>
-    update((s) => ({ ...s, savings: { ...s.savings, ...patch } }));
 
   // Rent is hidden when a mortgage is active.
   const cats = CATEGORIES.filter((c) => !(state.mortgage.on && c.key === "rent"));
@@ -64,26 +62,6 @@ export default function Inputs({ onBack, onResults, onEdit }) {
             </div>
           ))}
         </div>
-      </Card>
-
-      <Card>
-        <h2 className="text-[20px] font-bold">
-          Savings / cash on hand <span className="text-[15px] font-normal text-muted">(optional)</span>
-        </h2>
-        <p className="mb-4 text-sm text-muted">Spare cash you could throw at your debt for a head start.</p>
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="min-w-[160px] max-w-[220px] flex-1">
-            <label className="mb-1.5 block text-[11px] uppercase tracking-[.06em] text-muted">Total savings</label>
-            <MoneyInput value={state.savings.total} onChange={(v) => setSavings({ total: v })} placeholder="3000" />
-          </div>
-          {parseFloat(state.savings.total) > 0 && (
-            <div className="min-w-[200px] max-w-[260px] flex-1">
-              <label className="mb-1.5 block text-[11px] uppercase tracking-[.06em] text-muted">Use now toward debt</label>
-              <MoneyInput value={state.savings.use} onChange={(v) => setSavings({ use: v })} placeholder="0" />
-            </div>
-          )}
-        </div>
-        <p className="mt-2.5 text-xs text-muted">A one-off lump sum applied to your highest-interest debt before month 1. Tip: keep some back as an emergency fund.</p>
       </Card>
 
       <div className="mt-6 flex items-center gap-3">

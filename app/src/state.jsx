@@ -7,7 +7,7 @@ export const CATEGORIES = [
   { key: "rent", name: "Rent", color: "#f0556f" },
   { key: "utilities", name: "Utilities", color: "#46d17f" },
   { key: "phone", name: "Phone", color: "#f2932f" },
-  { key: "gas", name: "Gas", color: "#9b6bf2" },
+  { key: "gas", name: "Petrol/Diesel", color: "#9b6bf2" },
   { key: "carInsurance", name: "Car Insurance", color: "#2fd6b0" },
   { key: "food", name: "Food", color: "#ef4444" },
   { key: "medical", name: "Medical", color: "#d2691e" },

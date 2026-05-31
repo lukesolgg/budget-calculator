@@ -197,56 +197,73 @@ function ScheduleCards({ debts, sim, weekly, payWord, freq }) {
   if (!sim.schedule.length || !isFinite(sim.months)) {
     return <p className="text-[13px] text-muted">A full payment plan isn't available (these debts aren't projected to clear with the current payment).</p>;
   }
-  const perPay = (monthly) => fmt(monthlyToFreq(monthly, freq));
   const order = debts.map((_, i) => i).sort((a, b) => (sim.clearedMonth[a] || 1e9) - (sim.clearedMonth[b] || 1e9));
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {order.map((di, rank) => {
-        const d = debts[di];
-        const lumpAmt = sim.lumpPerDebt[di] || 0;
-        const rows = [];
-        if (lumpAmt > 0.5) rows.push({ label: "Start (savings)", pay: lumpAmt, bal: null });
-        for (let m = 0; m < sim.schedule.length; m++) {
-          const pay = sim.schedule[m].pay[di], bal = sim.schedule[m].bal[di];
-          if (pay > 0.5 || bal > 0.5) rows.push({ label: `Month ${m + 1}`, pay, bal });
-          if (bal <= 0.5) break;
-        }
-        const fw = d.freeMonths > 0 ? freeWindowStyle(d.freeMonths) : null;
-        return (
-          <div key={di} className="overflow-hidden rounded-xl border border-border bg-[#0c121d]">
-            <div className="border-b border-border p-3.5">
-              <span className="mr-2 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-accent align-middle text-[12px] font-extrabold text-[#0b0f17]">{rank + 1}</span>
-              <span className="align-middle text-[15px] font-bold">{d.name}</span>
-              {fw && (
-                <span className="ml-2 rounded-full border px-2 py-0.5 align-middle text-[10px] font-bold uppercase" style={{ background: fw.bg, borderColor: fw.bd, color: fw.tx }}>
-                  0% · {d.freeMonths} mo left
-                </span>
-              )}
-              <div className="mt-1.5 text-[12px] text-muted">{fmt(d.balance)} · {d.rate}% APR · <b className="text-ink">{sim.clearedMonth[di] ? `Cleared in ${monthsToStr(sim.clearedMonth[di])}` : "Not cleared"}</b></div>
-            </div>
-            <div className="max-h-[280px] overflow-y-auto">
-              <table className="w-full border-collapse text-[13px]">
-                <thead><tr className="text-[11px] uppercase tracking-[.05em] text-muted">
-                  <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-left">When</th>
-                  <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-right">{weekly ? "Pay (month)" : "Pay"}</th>
-                  {weekly && <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-right">Per {payWord}</th>}
-                  <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-right">Balance after</th>
-                </tr></thead>
-                <tbody>
-                  {rows.map((r, i) => (
-                    <tr key={i} className="even:bg-[#0e141f]">
-                      <td className="border-b border-border px-4 py-2 text-muted">{r.label}</td>
-                      <td className="border-b border-border px-4 py-2 text-right tabular-nums">{r.pay > 0.5 ? fmt(r.pay) : "—"}</td>
-                      {weekly && <td className="border-b border-border px-4 py-2 text-right tabular-nums text-accent">{r.pay > 0.5 && r.bal !== null ? perPay(r.pay) : ""}</td>}
-                      <td className="border-b border-border px-4 py-2 text-right tabular-nums">{r.bal === null ? "" : r.bal > 0.5 ? fmt(r.bal) : <span className="font-semibold text-good">cleared ✓</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-4">
+      {order.map((di, rank) => (
+        <ScheduleCard key={di} di={di} rank={rank} d={debts[di]} sim={sim} weekly={weekly} payWord={payWord} freq={freq} />
+      ))}
+    </div>
+  );
+}
+
+// Rows shown before the "Show all" toggle kicks in (keeps long plans from forcing a scroll).
+const COLLAPSED_ROWS = 6;
+
+function ScheduleCard({ di, rank, d, sim, weekly, payWord, freq }) {
+  const perPay = (monthly) => fmt(monthlyToFreq(monthly, freq));
+  const lumpAmt = sim.lumpPerDebt[di] || 0;
+  const rows = [];
+  if (lumpAmt > 0.5) rows.push({ label: "Start (savings)", pay: lumpAmt, bal: null });
+  for (let m = 0; m < sim.schedule.length; m++) {
+    const pay = sim.schedule[m].pay[di], bal = sim.schedule[m].bal[di];
+    if (pay > 0.5 || bal > 0.5) rows.push({ label: `Month ${m + 1}`, pay, bal });
+    if (bal <= 0.5) break;
+  }
+  const fw = d.freeMonths > 0 ? freeWindowStyle(d.freeMonths) : null;
+  const collapsible = rows.length > COLLAPSED_ROWS;
+  const [open, setOpen] = useState(false);
+  const visible = collapsible && !open ? rows.slice(0, COLLAPSED_ROWS) : rows;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-[#0c121d]">
+      <div className="border-b border-border p-3.5">
+        <span className="mr-2 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-accent align-middle text-[12px] font-extrabold text-[#0b0f17]">{rank + 1}</span>
+        <span className="align-middle text-[15px] font-bold">{d.name}</span>
+        {fw && (
+          <span className="ml-2 rounded-full border px-2 py-0.5 align-middle text-[10px] font-bold uppercase" style={{ background: fw.bg, borderColor: fw.bd, color: fw.tx }}>
+            0% · {d.freeMonths} mo left
+          </span>
+        )}
+        <div className="mt-1.5 text-[12px] text-muted">{fmt(d.balance)} · {d.rate}% APR · <b className="text-ink">{sim.clearedMonth[di] ? `Cleared in ${monthsToStr(sim.clearedMonth[di])}` : "Not cleared"}</b></div>
+      </div>
+      <table className="w-full border-collapse text-[13px]">
+        <thead><tr className="text-[11px] uppercase tracking-[.05em] text-muted">
+          <th className="bg-[#141b29] px-4 py-2 text-left">When</th>
+          <th className="bg-[#141b29] px-4 py-2 text-right">{weekly ? "Pay (month)" : "Pay"}</th>
+          {weekly && <th className="bg-[#141b29] px-4 py-2 text-right">Per {payWord}</th>}
+          <th className="bg-[#141b29] px-4 py-2 text-right">Balance after</th>
+        </tr></thead>
+        <tbody>
+          {visible.map((r, i) => (
+            <tr key={i} className="even:bg-[#0e141f]">
+              <td className="border-b border-border px-4 py-2 text-muted">{r.label}</td>
+              <td className="border-b border-border px-4 py-2 text-right tabular-nums">{r.pay > 0.5 ? fmt(r.pay) : "—"}</td>
+              {weekly && <td className="border-b border-border px-4 py-2 text-right tabular-nums text-accent">{r.pay > 0.5 && r.bal !== null ? perPay(r.pay) : ""}</td>}
+              <td className="border-b border-border px-4 py-2 text-right tabular-nums">{r.bal === null ? "" : r.bal > 0.5 ? fmt(r.bal) : <span className="font-semibold text-good">cleared ✓</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {collapsible && (
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex w-full items-center justify-center gap-1.5 border-t border-border bg-[#0e141f] py-2.5 text-[12px] font-semibold text-accent transition hover:bg-[#141b29]"
+        >
+          {open ? "Show less" : `Show all ${rows.length} months`}
+          <Chevron dir={open ? "up" : "down"} />
+        </button>
+      )}
     </div>
   );
 }

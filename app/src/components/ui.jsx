@@ -43,7 +43,12 @@ export function MoneyInput({ value, onChange, placeholder, className = "", big =
 }
 
 export function Chevron({ dir = "right" }) {
-  const pts = dir === "right" ? "9 18 15 12 9 6" : "15 18 9 12 15 6";
+  const pts = {
+    right: "9 18 15 12 9 6",
+    left: "15 18 9 12 15 6",
+    down: "6 9 12 15 18 9",
+    up: "6 15 12 9 18 15",
+  }[dir] || "9 18 15 12 9 6";
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points={pts} />
