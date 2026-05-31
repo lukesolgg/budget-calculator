@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, Chevron } from "../components/ui.jsx";
 import { usePlanner, monthlyIncomeOf, debtsOf, livingOf } from "../state.jsx";
 import { fmt, projectSavings } from "../lib/engine.js";
-import { SAVINGS_ACCOUNTS, SAVINGS_LAST_UPDATED, bestSavings } from "../data/savings.js";
+import { SAVINGS_ACCOUNTS, SAVINGS_LAST_UPDATED } from "../data/savings.js";
 
 const TYPE_ORDER = ["Easy Access", "Regular Saver", "Fixed Rate", "Cash ISA"];
 const TYPE_BLURB = {
@@ -11,6 +11,7 @@ const TYPE_BLURB = {
   "Fixed Rate": "Lock money away for a set term for a guaranteed rate.",
   "Cash ISA": "Tax-free interest, within your annual ISA allowance.",
 };
+const keyOf = (a) => `${a.provider}·${a.name}`;
 
 export default function Savings({ onBack }) {
   const { state } = usePlanner();
@@ -20,20 +21,14 @@ export default function Savings({ onBack }) {
   const minTotal = debts.reduce((s, d) => s + d.min, 0);
   const spare = Math.max(0, income - living - minTotal);
 
-  const best = bestSavings();
-  // Forecast controls — seed monthly from spare cash.
-  const [monthly, setMonthly] = useState(Math.round(spare));
-  const [years, setYears] = useState(5);
-  const [rate, setRate] = useState(best.aer);
-
-  const proj = useMemo(
-    () => projectSavings({ lump: 0, monthly, annualRate: rate / 100, years }),
-    [monthly, rate, years]
-  );
+  // Accordion: at most one account's forecast open at a time.
+  const [openKey, setOpenKey] = useState(null);
 
   const grouped = TYPE_ORDER
-    .map((t) => ({ type: t, items: SAVINGS_ACCOUNTS.filter((a) => a.type === t) }))
+    .map((t) => ({ type: t, items: SAVINGS_ACCOUNTS.filter((a) => a.type === t).sort((x, y) => y.aer - x.aer) }))
     .filter((g) => g.items.length);
+
+  const topRate = Math.max(...SAVINGS_ACCOUNTS.map((a) => a.aer));
 
   return (
     <div className="mx-auto max-w-[1000px]">
@@ -43,82 +38,214 @@ export default function Savings({ onBack }) {
         </button>
       </div>
 
-      <header className="mb-6">
-        <h1 className="text-[26px] font-extrabold tracking-tight">Best UK savings</h1>
-        <p className="mt-1 text-muted">Grow your spare cash. Live UK rates, updated {SAVINGS_LAST_UPDATED}.</p>
-      </header>
-
-      {/* Forecast */}
-      <Card className="mb-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
-          {/* Controls */}
+      {/* Hero */}
+      <Card className="mb-7 overflow-hidden !p-0">
+        <div className="grid grid-cols-1 items-center gap-6 p-6 sm:p-8 md:grid-cols-[1.3fr_1fr]">
           <div>
-            <h3 className="mb-3 font-bold">Forecast your savings</h3>
-            <Field label="Amount saved each month">
-              <span className="relative block">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">£</span>
-                <input type="number" min="0" value={monthly} onChange={(e) => setMonthly(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full rounded-xl border border-border bg-[#0c121d] py-3 pl-7 pr-3 text-lg font-bold text-ink outline-none focus:border-accent" />
-              </span>
-              {spare > 0 && (
-                <button onClick={() => setMonthly(Math.round(spare))} className="mt-1.5 text-[12px] text-accent hover:underline">
-                  Use my spare cash ({fmt(spare)}/mo)
-                </button>
-              )}
-            </Field>
-
-            <Field label={`Interest rate · ${rate.toFixed(2)}% AER`}>
-              <input type="range" min="0.5" max="8" step="0.05" value={rate} onChange={(e) => setRate(parseFloat(e.target.value))} style={{ "--acc": "#2fe6a6" }} />
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {[...SAVINGS_ACCOUNTS].sort((a, b) => b.aer - a.aer).slice(0, 3).map((a) => (
-                  <button key={a.provider + a.name} onClick={() => setRate(a.aer)}
-                    className="rounded-full border border-[#1e2b27] bg-[#0c121d] px-2.5 py-1 text-[11px] text-muted transition hover:text-ink">
-                    {a.provider} {a.aer}%
-                  </button>
-                ))}
-              </div>
-            </Field>
-
-            <Field label={`Time · ${years} year${years > 1 ? "s" : ""}`}>
-              <input type="range" min="1" max="30" step="1" value={years} onChange={(e) => setYears(parseInt(e.target.value, 10))} style={{ "--acc": "#2fe6a6" }} />
-            </Field>
-          </div>
-
-          {/* Result + chart */}
-          <div className="rounded-xl bg-[#0c121d] p-5">
-            <div className="text-[12px] uppercase tracking-[.06em] text-muted">After {years} year{years > 1 ? "s" : ""} you'd have</div>
-            <div className="mt-1 text-[40px] font-extrabold text-good">{fmt(proj.balance)}</div>
-            <div className="mt-1 text-[13px] text-muted">
-              You'd pay in <b className="text-ink">{fmt(proj.contributed)}</b> and earn <b className="text-good">{fmt(proj.interest)}</b> in interest.
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#1e3a30] bg-[#0c1a15] px-3 py-1 text-[11px] font-bold uppercase tracking-[.08em] text-accent">
+              Live UK rates · updated {SAVINGS_LAST_UPDATED}
+            </span>
+            <h1 className="mt-3 text-[30px] font-extrabold leading-tight tracking-tight">
+              Make your spare cash <span className="text-accent">actually work</span>.
+            </h1>
+            <p className="mt-2.5 max-w-[460px] text-[15px] leading-relaxed text-muted">
+              These are some of the most competitive UK savings accounts right now — hand-picked across
+              easy-access, regular savers, fixed bonds and cash ISAs. Tap any account to forecast exactly
+              what it could earn you.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-6">
+              <Headline value={`${topRate.toFixed(2)}%`} label="Top rate available" />
+              <Headline value={fmt(spare)} label="Your spare / month" />
+              <Headline value={SAVINGS_ACCOUNTS.length} label="Accounts tracked" />
             </div>
-            <GrowthChart series={proj.yearly} years={years} />
           </div>
+          <HeroArt />
         </div>
-        {spare <= 0 && (
-          <p className="mt-4 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3.5 py-2.5 text-[13px] text-warn">
-            You've no spare cash flagged right now — clear your debts or trim expenses first, then this is where it can grow.
-          </p>
-        )}
       </Card>
 
-      {/* Account list */}
+      {/* Tables per category */}
       {grouped.map((g) => (
-        <div key={g.type} className="mb-6">
-          <div className="mb-2 flex items-baseline gap-3">
+        <Card key={g.type} className="mb-6 overflow-hidden">
+          <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-lg font-bold">{g.type}</h3>
             <span className="text-[13px] text-muted">{TYPE_BLURB[g.type]}</span>
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {g.items.sort((a, b) => b.aer - a.aer).map((a) => (
-              <AccountCard key={a.provider + a.name} a={a} onPick={() => setRate(a.aer)} />
-            ))}
+          <div className="-mx-6 overflow-x-auto px-6">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-[.05em] text-muted">
+                  <th className="py-2 pr-3 text-left font-semibold">Account</th>
+                  <th className="px-3 py-2 text-right font-semibold">AER</th>
+                  <th className="hidden px-3 py-2 text-right font-semibold sm:table-cell">Min</th>
+                  <th className="hidden px-3 py-2 text-left font-semibold md:table-cell">Access</th>
+                  <th className="py-2 pl-3 text-right font-semibold"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.items.map((a) => {
+                  const k = keyOf(a);
+                  const open = openKey === k;
+                  return (
+                    <AccountRows
+                      key={k}
+                      a={a}
+                      open={open}
+                      onToggle={() => setOpenKey(open ? null : k)}
+                      spare={spare}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+        </Card>
       ))}
 
       <p className="mt-2 text-center text-[11px] text-muted">
         All accounts FSCS protected up to £85,000. Rates change often — always check the provider before applying. General information, not financial advice.
       </p>
+    </div>
+  );
+}
+
+function Headline({ value, label }) {
+  return (
+    <div>
+      <div className="text-[24px] font-extrabold leading-none text-good">{value}</div>
+      <div className="mt-1 text-[11px] uppercase tracking-[.06em] text-muted">{label}</div>
+    </div>
+  );
+}
+
+// Inline SVG illustration — growing savings, no external image needed.
+function HeroArt() {
+  return (
+    <div className="relative mx-auto hidden w-full max-w-[320px] md:block">
+      <svg viewBox="0 0 320 200" className="w-full">
+        <defs>
+          <linearGradient id="heroFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#2fe6a6" stopOpacity="0.35" />
+            <stop offset="1" stopColor="#2fe6a6" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* growth area */}
+        <polygon points="10,170 10,150 70,140 130,110 190,80 250,48 310,20 310,170" fill="url(#heroFill)" />
+        <polyline points="10,150 70,140 130,110 190,80 250,48 310,20" fill="none" stroke="#2fe6a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {/* coin stacks */}
+        {[
+          { x: 70, h: 30 }, { x: 130, h: 60 }, { x: 190, h: 90 }, { x: 250, h: 122 },
+        ].map((c, i) => (
+          <g key={i}>
+            {Array.from({ length: Math.round(c.h / 14) }).map((_, j) => (
+              <ellipse key={j} cx={c.x} cy={170 - j * 14} rx="20" ry="7"
+                fill={j % 2 ? "#12b886" : "#19c596"} stroke="#0b3b2c" strokeWidth="1" />
+            ))}
+            <text x={c.x} y={195} textAnchor="middle" fontSize="11" fill="#5fd6b0">£</text>
+          </g>
+        ))}
+        <text x="300" y="14" textAnchor="end" fontSize="13" fontWeight="700" fill="#2fe6a6">↑ grows</text>
+      </svg>
+    </div>
+  );
+}
+
+function AccountRows({ a, open, onToggle, spare }) {
+  return (
+    <>
+      <tr
+        onClick={onToggle}
+        className={`cursor-pointer border-t border-border transition hover:bg-[#0e141f] ${open ? "bg-[#0e141f]" : ""}`}
+      >
+        <td className="py-3 pr-3">
+          <div className="font-bold">{a.provider}</div>
+          <div className="text-[12px] text-muted">{a.name}</div>
+          <div className="mt-1 flex flex-wrap gap-1.5 sm:hidden">
+            <MiniTags a={a} />
+          </div>
+        </td>
+        <td className="px-3 py-3 text-right">
+          <span className="text-[20px] font-extrabold text-good">{a.aer}%</span>
+        </td>
+        <td className="hidden px-3 py-3 text-right tabular-nums text-muted sm:table-cell">{fmt(a.min)}</td>
+        <td className="hidden px-3 py-3 text-left text-[13px] text-muted md:table-cell">{a.access}</td>
+        <td className="py-3 pl-3 text-right">
+          <span className={`inline-flex transition-transform ${open ? "rotate-180" : ""}`}><Chevron dir="down" /></span>
+        </td>
+      </tr>
+      {open && (
+        <tr className="border-t border-border bg-[#0a0f18]">
+          <td colSpan={5} className="p-0">
+            <AccountForecast a={a} spare={spare} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function MiniTags({ a }) {
+  return (
+    <>
+      {a.taxFree && <Tag>Tax-free</Tag>}
+      {a.bonus && <Tag>Bonus rate</Tag>}
+      {a.termMonths && <Tag>{a.termMonths}-mo term</Tag>}
+      {a.perMonthCap && <Tag>Max {fmt(a.perMonthCap)}/mo</Tag>}
+    </>
+  );
+}
+
+// The inline "forecast your earnings" dropdown for one account.
+function AccountForecast({ a, spare }) {
+  const cap = a.perMonthCap || Infinity;
+  const seed = Math.min(Math.round(spare) || 0, cap);
+  const [monthly, setMonthly] = useState(seed > 0 ? seed : Math.min(200, cap === Infinity ? 200 : cap));
+  const [years, setYears] = useState(a.termMonths && a.termMonths < 12 ? 1 : 5);
+
+  const proj = useMemo(
+    () => projectSavings({ lump: 0, monthly, annualRate: a.aer / 100, years }),
+    [monthly, years, a.aer]
+  );
+
+  return (
+    <div className="grid grid-cols-1 gap-6 p-5 lg:grid-cols-[1fr_1.2fr]">
+      <div>
+        <h4 className="mb-1 font-bold">Forecast your earnings · {a.provider}</h4>
+        <p className="mb-4 flex flex-wrap gap-1.5 text-[12px] text-muted"><MiniTags a={a} /></p>
+
+        <Field label="Amount saved each month">
+          <span className="relative block">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">£</span>
+            <input
+              type="number" min="0" value={monthly}
+              onChange={(e) => setMonthly(Math.min(cap, Math.max(0, parseFloat(e.target.value) || 0)))}
+              className="w-full rounded-xl border border-border bg-[#0c121d] py-3 pl-7 pr-3 text-lg font-bold text-ink outline-none focus:border-accent" />
+          </span>
+          {a.perMonthCap && (
+            <div className="mt-1.5 text-[12px] text-muted">Capped at <b className="text-ink">{fmt(a.perMonthCap)}/mo</b> on this account.</div>
+          )}
+          {spare > 0 && monthly !== Math.min(Math.round(spare), cap) && (
+            <button onClick={() => setMonthly(Math.min(Math.round(spare), cap))} className="mt-1.5 text-[12px] text-accent hover:underline">
+              Use my spare cash ({fmt(Math.min(Math.round(spare), cap))}/mo)
+            </button>
+          )}
+        </Field>
+
+        <Field label={`Time · ${years} year${years > 1 ? "s" : ""}`}>
+          <input type="range" min="1" max="30" step="1" value={years} onChange={(e) => setYears(parseInt(e.target.value, 10))} style={{ "--acc": "#2fe6a6" }} />
+          {a.termMonths && (
+            <div className="mt-1 text-[12px] text-muted">Note: the headline rate runs for {a.termMonths} months — this projection assumes a similar rate continues.</div>
+          )}
+        </Field>
+      </div>
+
+      <div className="rounded-xl bg-[#0c121d] p-5">
+        <div className="text-[12px] uppercase tracking-[.06em] text-muted">After {years} year{years > 1 ? "s" : ""} at {a.aer}% you'd have</div>
+        <div className="mt-1 text-[36px] font-extrabold text-good">{fmt(proj.balance)}</div>
+        <div className="mt-1 text-[13px] text-muted">
+          You'd pay in <b className="text-ink">{fmt(proj.contributed)}</b> and earn <b className="text-good">{fmt(proj.interest)}</b> in interest.
+        </div>
+        <GrowthChart series={proj.yearly} />
+      </div>
     </div>
   );
 }
@@ -132,41 +259,11 @@ function Field({ label, children }) {
   );
 }
 
-function AccountCard({ a, onPick }) {
-  return (
-    <div className="rounded-xl border border-border bg-[#0c121d] p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="font-bold">{a.provider}</div>
-          <div className="text-[13px] text-muted">{a.name}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-[22px] font-extrabold text-good">{a.aer}%</div>
-          <div className="text-[10px] uppercase tracking-[.06em] text-muted">AER</div>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {a.taxFree && <Tag>Tax-free</Tag>}
-        {a.bonus && <Tag>Bonus rate</Tag>}
-        {a.termMonths && <Tag>{a.termMonths}-mo term</Tag>}
-        {a.perMonthCap && <Tag>Max {fmt(a.perMonthCap)}/mo</Tag>}
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-y-1 text-[12px] text-muted">
-        <span>Min: <b className="text-ink">{fmt(a.min)}</b></span>
-        <span>Max: <b className="text-ink">{a.max ? fmt(a.max) : "No limit"}</b></span>
-        <span className="col-span-2">Access: <b className="text-ink">{a.access}</b></span>
-      </div>
-      {a.notes && <p className="mt-2 text-[12px] leading-snug text-muted">{a.notes}</p>}
-      <button onClick={onPick} className="mt-3 text-[12px] font-semibold text-accent hover:underline">Use this rate in the forecast →</button>
-    </div>
-  );
-}
-
 function Tag({ children }) {
   return <span className="rounded-full border border-[#1e3a30] bg-[#0c1a15] px-2 py-0.5 text-[10px] font-semibold text-accent">{children}</span>;
 }
 
-function GrowthChart({ series, years }) {
+function GrowthChart({ series }) {
   if (!series || series.length < 2) return null;
   const W = 520, H = 120, pad = 4;
   const maxBal = series[series.length - 1].balance || 1;
