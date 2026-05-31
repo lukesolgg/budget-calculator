@@ -4,9 +4,10 @@ import Donut from "../components/Donut.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, savingsToDeployOf,
 } from "../state.jsx";
-import { fmt, monthsToStr, buildPlans, simulateDetailed } from "../lib/engine.js";
+import { fmt, monthsToStr, buildPlans, simulateDetailed, monthlyToFreq, freqLabel } from "../lib/engine.js";
 
 const ACC = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
+const PAYS_PER_MONTH = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1 };
 
 export default function Detail({ planKey, onBack }) {
   const { state } = usePlanner();
@@ -14,6 +15,12 @@ export default function Detail({ planKey, onBack }) {
   const debts = debtsOf(state);
   const living = livingOf(state);
   const lump = savingsToDeployOf(state);
+
+  // Pay-frequency helpers: convert a monthly £ figure into a per-paycheck one.
+  const freq = state.payFrequency || "monthly";
+  const weekly = freq !== "monthly";
+  const perPay = (monthly) => fmt(monthlyToFreq(monthly, freq));
+  const payWord = freqLabel(freq); // "week" | "fortnight" | "month"
 
   const { plans } = useMemo(() => buildPlans(debts, income, living, lump), [debts, income, living, lump]);
   const plan = plans.find((p) => p.def.key === planKey) || plans[0];
@@ -80,7 +87,12 @@ export default function Detail({ planKey, onBack }) {
 
       <div className="mb-6 text-center">
         <h2 className="text-[26px] font-bold tracking-tight">{plan.def.title}</h2>
-        <p className="text-muted">Debt-free in {monthsToStr(sim.months)} · {fmt(debtPayments)}/mo toward debt</p>
+        <p className="text-muted">
+          Debt-free in {monthsToStr(sim.months)} ·{" "}
+          {weekly
+            ? <><b className="text-ink">{perPay(debtPayments)}</b> toward debt every {payWord} <span className="opacity-70">({fmt(debtPayments)}/mo)</span></>
+            : <>{fmt(debtPayments)}/mo toward debt</>}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -139,11 +151,14 @@ export default function Detail({ planKey, onBack }) {
       {/* Milestones + schedule */}
       <Card className="mt-6">
         <h3 className="mb-3.5 font-bold">Month-by-month milestones</h3>
-        <Milestones plan={plan} debts={debts} sim={sim} toDebt={debtPayments} extra={alloc.extra} lump={lump} />
+        <Milestones plan={plan} debts={debts} sim={sim} toDebt={debtPayments} extra={alloc.extra} lump={lump} weekly={weekly} payWord={payWord} freq={freq} />
 
         <h3 className="mb-1 mt-7 font-bold">Exact payment plan — card by card</h3>
-        <p className="mb-3.5 text-[13px] text-muted">Each debt in the order you'll clear it, with exactly what to pay and when.</p>
-        <ScheduleCards debts={debts} sim={sim} />
+        <p className="mb-3.5 text-[13px] text-muted">
+          Each debt in the order you'll clear it, with exactly what to pay and when.
+          {weekly && <> Each month also shows the amount to set aside <b className="text-ink">every {payWord}</b>.</>}
+        </p>
+        <ScheduleCards debts={debts} sim={sim} weekly={weekly} payWord={payWord} freq={freq} />
       </Card>
     </div>
   );
@@ -160,8 +175,11 @@ function Slider({ label, val, color, pct, onChange }) {
   );
 }
 
-function Milestones({ plan, debts, sim, toDebt, extra, lump }) {
+function Milestones({ plan, debts, sim, toDebt, extra, lump, weekly, payWord, freq }) {
   const items = [];
+  if (weekly) {
+    items.push({ m: "Each " + payWord, win: false, txt: <>You're paid {payWord}ly, so aim to set aside <b className="text-ink">{fmt(monthlyToFreq(toDebt, freq))}</b> toward your debts every {payWord} — that adds up to {fmt(toDebt)}/month.</> });
+  }
   if (lump > 0) {
     const hit = sim.lumpPerDebt.map((amt, i) => ({ name: debts[i].name, amt })).filter((x) => x.amt > 0.5)
       .map((x) => `${fmt(x.amt)} off ${x.name}`).join(", ");
@@ -193,10 +211,11 @@ function Milestones({ plan, debts, sim, toDebt, extra, lump }) {
   );
 }
 
-function ScheduleCards({ debts, sim }) {
+function ScheduleCards({ debts, sim, weekly, payWord, freq }) {
   if (!sim.schedule.length || !isFinite(sim.months)) {
     return <p className="text-[13px] text-muted">A full payment plan isn't available (these debts aren't projected to clear with the current payment).</p>;
   }
+  const perPay = (monthly) => fmt(monthlyToFreq(monthly, freq));
   const order = debts.map((_, i) => i).sort((a, b) => (sim.clearedMonth[a] || 1e9) - (sim.clearedMonth[b] || 1e9));
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -222,7 +241,8 @@ function ScheduleCards({ debts, sim }) {
               <table className="w-full border-collapse text-[13px]">
                 <thead><tr className="text-[11px] uppercase tracking-[.05em] text-muted">
                   <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-left">When</th>
-                  <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-right">Pay</th>
+                  <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-right">{weekly ? "Pay (month)" : "Pay"}</th>
+                  {weekly && <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-right">Per {payWord}</th>}
                   <th className="sticky top-0 bg-[#141b29] px-4 py-2 text-right">Balance after</th>
                 </tr></thead>
                 <tbody>
@@ -230,6 +250,7 @@ function ScheduleCards({ debts, sim }) {
                     <tr key={i} className="even:bg-[#0e141f]">
                       <td className="border-b border-border px-4 py-2 text-muted">{r.label}</td>
                       <td className="border-b border-border px-4 py-2 text-right tabular-nums">{r.pay > 0.5 ? fmt(r.pay) : "—"}</td>
+                      {weekly && <td className="border-b border-border px-4 py-2 text-right tabular-nums text-accent">{r.pay > 0.5 && r.bal !== null ? perPay(r.pay) : ""}</td>}
                       <td className="border-b border-border px-4 py-2 text-right tabular-nums">{r.bal === null ? "" : r.bal > 0.5 ? fmt(r.bal) : <span className="font-semibold text-good">cleared ✓</span>}</td>
                     </tr>
                   ))}
