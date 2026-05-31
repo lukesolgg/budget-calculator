@@ -34,9 +34,8 @@ too, but debt-help is the core). Tone: supportive, motivating, plain-English.
 - Keep it skippable/optional where sensible so it doesn't feel heavy.
 
 ## Build order (proposed — one slice at a time, commit each)
-1. **Dashboard shell** — convert the post-onboarding flow into a dashboard with
-   stat header + cards that link to existing Results/Detail. Foundation for all
-   future sections. (next up)
+1. **Dashboard shell** — DONE. Stat header + section cards (debt live, others
+   coming-soon). Lands here after onboarding. (Dashboard.jsx)
 2. **Onboarding v2** — add job + goal questions; feed the dashboard.
 3. **Savings section** — high-yield accounts list + growth forecast (data: Luke).
 4. **Career/income section** — promotions + side hustles; needs job→pay dataset.
