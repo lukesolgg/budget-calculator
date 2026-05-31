@@ -82,10 +82,10 @@ export default function Welcome({ onNew, onReturn, hasDraft }) {
           {hasDraft ? "Continue where you left off" : "Get started — it's free"}
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </Button>
-        <button onClick={onReturn} className="group inline-flex items-center gap-1.5 text-sm font-medium text-muted transition hover:text-ink">
+        <Button variant="ghost" onClick={onReturn} className="group w-full py-3.5 text-[15px]">
           Already been here before?
           <span className="text-accent transition group-hover:translate-x-0.5">→</span>
-        </button>
+        </Button>
       </div>
 
       <p className="mt-7 text-xs text-muted">
