@@ -366,6 +366,13 @@
   .acct-user .dotg { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
   .acct-status { font-size: 12px; color: var(--muted); }
   .btn-sm { padding: 8px 14px; font-size: 13px; }
+  .save-state { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .save-state .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .save-state.dirty { color: #f0b86a; }
+  .save-state.dirty .dot { background: #f0b86a; box-shadow: 0 0 0 3px rgba(240,184,106,.18); }
+  .save-state.saved { color: #4ade80; }
+  .save-state.saved .dot { background: #4ade80; }
+  #saveBtn.dirty { box-shadow: 0 0 0 2px rgba(240,184,106,.5), 0 6px 18px rgba(36,108,240,.35); }
 
   .modal-overlay { position: fixed; inset: 0; background: rgba(4,7,12,.72); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
   .modal { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 18px; padding: 26px; width: 100%; max-width: 440px; position: relative; }
@@ -406,6 +413,7 @@
     <div class="account-bar" id="accountBar">
       <span class="acct-status" id="acctStatus"></span>
       <span class="acct-user" id="acctUser" style="display:none;"><span class="dotg"></span><span id="acctUserName"></span></span>
+      <span class="save-state" id="saveState" style="display:none;"></span>
       <button id="saveBtn" class="btn btn-primary btn-sm" type="button" style="display:none;">Save progress</button>
       <button id="loginBtn" class="btn btn-ghost btn-sm" type="button">Sign in / Sign up</button>
       <button id="logoutBtn" class="btn btn-ghost btn-sm" type="button" style="display:none;">Log out</button>
@@ -1138,6 +1146,7 @@
     saveDraft();
     if (session) {
       const res = await backend.save(session.username, session.pin, collectState());
+      if (res.ok) setDirty(false);
       flashStatus(res.ok ? "Progress saved ✓" : (res.error || "Save failed"), !res.ok);
     } else {
       flashStatus("Saved on this device — sign in to keep it safe", false);
@@ -2151,6 +2160,7 @@
 
   function applyState(s) {
     if (!s) return;
+    applyingState = true;
     incomeEl.value = s.income || "";
     rowsEl.querySelectorAll("input").forEach((i) => { i.value = (s.expenses && s.expenses[i.dataset.key]) || ""; });
 
@@ -2194,11 +2204,34 @@
 
     refreshDebts();
     render();
+    applyingState = false;
   }
 
   // --- Session + UI --------------------------------------------------------
+  let applyingState = false; // suppresses dirty-marking while restoring a saved plan
   let session = null; // { username, pin }
+  let dirty = false;  // true when the form has changed since the last cloud save
   const $ = (id) => document.getElementById(id);
+
+  // Mark the plan as having unsaved changes (only meaningful when signed in).
+  function setDirty(v) {
+    dirty = v;
+    updateSaveState();
+  }
+  function updateSaveState() {
+    const el = $("saveState"), btn = $("saveBtn");
+    if (!session) { el.style.display = "none"; btn.classList.remove("dirty"); return; }
+    el.style.display = "inline-flex";
+    if (dirty) {
+      el.className = "save-state dirty";
+      el.innerHTML = '<span class="dot"></span>Unsaved changes';
+      btn.classList.add("dirty");
+    } else {
+      el.className = "save-state saved";
+      el.innerHTML = '<span class="dot"></span>All changes saved';
+      btn.classList.remove("dirty");
+    }
+  }
 
   function restoreSession() {
     try { session = JSON.parse(sessionStorage.getItem("dfp_session") || "null"); } catch { session = null; }
@@ -2221,6 +2254,7 @@
     $("loginBtn").style.display = loggedIn ? "none" : "";
     if (loggedIn) $("acctUserName").textContent = session.username;
     $("acctStatus").textContent = useSupabase ? "" : "Saved in this browser";
+    updateSaveState();
   }
 
   // --- Auth modal ----------------------------------------------------------
@@ -2262,6 +2296,7 @@
         const res = await backend.signup(username, pin, collectState());
         if (!res.ok) { err.textContent = res.error; return; }
         setSession(username, pin);
+        setDirty(false);
         closeAuth();
         flashStatus("Account created — progress saved ✓");
       } else {
@@ -2269,6 +2304,7 @@
         if (!res.ok) { err.textContent = res.error; return; }
         setSession(username, pin);
         if (res.data) { applyState(res.data); saveDraft(); }
+        setDirty(false);
         closeAuth();
         flashStatus("Signed in — plan loaded ✓");
       }
@@ -2284,7 +2320,7 @@
     const btn = $("saveBtn"); btn.disabled = true; const prev = btn.textContent; btn.textContent = "Saving…";
     const res = await backend.save(session.username, session.pin, collectState());
     btn.disabled = false; btn.textContent = prev;
-    if (res.ok) flashStatus("Progress saved ✓");
+    if (res.ok) { setDirty(false); flashStatus("Progress saved ✓"); }
     else { flashStatus(res.error || "Save failed", true); if (/sign in/i.test(res.error || "")) clearSession(); }
   });
 
@@ -2321,8 +2357,13 @@
     try { s = JSON.parse(localStorage.getItem("dfp_draft") || "null"); } catch {}
     if (hasMeaningfulDraft(s)) applyState(s);
   }
-  // Save the draft whenever any input on the inputs screen changes.
-  document.getElementById("screen-inputs").addEventListener("input", scheduleDraftSave);
+  // Save the draft whenever any input on the inputs screen changes, and flag
+  // unsaved changes (unless we're programmatically restoring a saved plan).
+  document.getElementById("screen-inputs").addEventListener("input", () => {
+    if (applyingState) return;
+    scheduleDraftSave();
+    if (session && !dirty) setDirty(true);
+  });
 
   initSupabase();
   restoreSession();
