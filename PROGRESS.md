@@ -64,6 +64,12 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Career & income LIVE (verified): jobs.js = 406 UK occupations (ONS ASHE Table
+  14, 4-digit SOC, annual+hourly medians) via app/scripts/build-jobs.cjs (reads
+  rawdata/table14/*.xlsx, gitignored). data/careers.js (progressionFrom/search/
+  find). Career.jsx: role picker, pay-vs-median, progression ladder, compare-
+  any-role, side-hustle calc. jobSoc persisted (schema 4). Dashboard card live.
+- Savings section LIVE: Savings.jsx (forecast + growth chart, account list).
 - Debt/budget UX polish (verified): Results = donut left + stats panel right
   (per-plan debt-free rows), interest panel below cards, compare table removed,
   selected plan remembered (schema 3: plan namespace). Detail = milestones right
