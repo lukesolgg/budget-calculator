@@ -4,6 +4,7 @@ import {
   usePlanner, monthlyIncomeOf, debtsOf, DEBT_PLACEHOLDERS, MAX_DEBTS,
 } from "../state.jsx";
 import { useAuth } from "../lib/auth.jsx";
+import { SECTIONS } from "../data/sections.js";
 import { fmt } from "../lib/engine.js";
 
 export default function Wizard({ firstRun, onDone, onExitTop }) {
@@ -19,7 +20,7 @@ export default function Wizard({ firstRun, onDone, onExitTop }) {
 
   // Dynamic step list. Car-loan details only appear if they own a car.
   const steps = [];
-  if (includeAccount) steps.push("account");
+  if (includeAccount) steps.push("account", "goals");
   steps.push("age", "freq", "income", "mortgage", "carown");
   if (state.car.owns) steps.push("car");
   steps.push("pets", "debts");
@@ -34,6 +35,7 @@ export default function Wizard({ firstRun, onDone, onExitTop }) {
 
   const next = async () => {
     if (step === "income" && income <= 0) return;
+    if (step === "goals" && !state.goals.primary) return;
     if (step === "age") {
       const a = parseInt(state.age, 10);
       if (!a || a < 16 || a > 100) return;
@@ -63,6 +65,7 @@ export default function Wizard({ firstRun, onDone, onExitTop }) {
 
       <div key={step} className="animate-pop">
         {step === "account" && <AccountStep acct={acct} setAcct={setAcct} session={session} />}
+        {step === "goals" && <GoalsStep state={state} update={update} />}
         {step === "age" && <AgeStep state={state} update={update} />}
         {step === "freq" && <FreqStep state={state} update={update} />}
         {step === "income" && <IncomeStep state={state} update={update} income={income} />}
@@ -161,6 +164,66 @@ function PetsStep({ state, update }) {
         yes={{ emoji: "🐾", title: "Yes", desc: "I have pets" }}
         no={{ emoji: "🚫", title: "No", desc: "No pets" }}
       />
+    </>
+  );
+}
+
+function GoalsStep({ state, update }) {
+  const { primary, interests } = state.goals;
+  const setPrimary = (key) =>
+    update((s) => ({ ...s, goals: { ...s.goals, primary: key } }));
+  const toggleInterest = (key) =>
+    update((s) => {
+      const it = { ...s.goals.interests };
+      if (it[key]) delete it[key]; else it[key] = true;
+      return { ...s, goals: { ...s.goals, interests: it } };
+    });
+
+  return (
+    <>
+      <StepHead
+        kicker="Make it yours"
+        title="What do you want to focus on first?"
+        sub="Pick your main goal — your dashboard will lead with it. You can always change this later."
+      />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {SECTIONS.map((sec) => (
+          <button
+            key={sec.key}
+            onClick={() => setPrimary(sec.key)}
+            className={`relative flex flex-col items-center rounded-2xl border bg-[#0c121d] p-4 text-center transition hover:-translate-y-0.5 ${
+              primary === sec.key
+                ? "border-accent shadow-[0_0_0_1px_#2fe6a6,0_0_30px_-8px_#2fe6a6]"
+                : "border-border hover:border-[#244a3c]"
+            }`}
+          >
+            {primary === sec.key && <span className="absolute right-2.5 top-2 font-extrabold text-accent">✓</span>}
+            <span className="mb-2 text-2xl">{sec.emoji}</span>
+            <span className="text-[14px] font-bold leading-tight">{sec.title}</span>
+            {!sec.live && <span className="mt-1 text-[10px] uppercase tracking-[.06em] text-muted">Coming soon</span>}
+          </button>
+        ))}
+      </div>
+
+      {primary && (
+        <div className="mt-7">
+          <h3 className="text-[15px] font-bold">Anything else you're interested in?</h3>
+          <p className="mb-3 text-[13px] text-muted">Tick any extras to add them to your dashboard mix.</p>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {SECTIONS.filter((s) => s.key !== primary).map((sec) => (
+              <label
+                key={sec.key}
+                className="flex cursor-pointer select-none items-center gap-3 rounded-xl border border-border bg-[#0c121d] px-3.5 py-3 text-sm transition hover:border-[#244a3c]"
+              >
+                <GlowCheck checked={!!interests[sec.key]} onChange={() => toggleInterest(sec.key)} />
+                <span className="text-lg">{sec.emoji}</span>
+                <span className="font-semibold">{sec.title}</span>
+                {!sec.live && <span className="ml-auto text-[10px] uppercase tracking-[.06em] text-muted">Soon</span>}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }

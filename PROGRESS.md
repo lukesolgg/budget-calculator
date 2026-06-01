@@ -64,6 +64,19 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Goals + personalised dashboard (build-verified; needs device pass):
+  - New onboarding "goals" step (after account, first-run only): pick a PRIMARY
+    focus + tick extra interests. State: `goals { primary, interests }` (schema 6).
+  - `src/data/sections.js` = single registry of dashboard tabs (incl. two new
+    COMING-SOON tabs: Emergency fund + Mortgage calculator). Used by the goals
+    step and the dashboard.
+  - Dashboard rebuilt: stat tiles → in-depth breakdown (expense donut + income/
+    living/min-payments/spare + legend) → rule-based RECOMMENDATIONS (top 3:
+    high-interest debt, spare→savings / invest-if-debt-free, emergency fund,
+    mortgage, pension) → personalised section cards (primary featured under
+    "Your focus", ticked interests next, everything else under "Explore more" —
+    nothing hidden). Recs/cards for coming-soon tabs show a "Coming soon" pill;
+    live ones navigate. No goals set (legacy users) = all tabs, no featured.
 - Onboarding + accounts overhaul (build-verified; needs device pass):
   - Auth centralised in `src/lib/auth.jsx` (AuthProvider/useAuth): holds the
     session + debounced cloud AUTO-SAVE (no more "Save progress" button). Wraps

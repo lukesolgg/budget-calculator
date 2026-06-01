@@ -48,6 +48,8 @@ export const initialState = {
   selectedPlan: "",        // "" | balanced | accelerated | avalanche
   alloc: null,             // locked { fun, savings, extra } split, or null
   allocLocked: false,
+  // What the user wants from the app — drives dashboard ordering + advice.
+  goals: { primary: "", interests: {} }, // primary = section key; interests = { [key]: true }
 };
 
 const DRAFT_KEY = "dfp_draft_react";
@@ -74,6 +76,7 @@ export function hydrate(flat) {
     car,
     pets,
     savings: { ...initialState.savings, ...(flat.savings || {}) },
+    goals: { primary: flat.goals?.primary || "", interests: flat.goals?.interests || {} },
     debts: flat.debts && flat.debts.length ? flat.debts : initialState.debts,
     expenses,
   };

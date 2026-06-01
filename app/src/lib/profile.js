@@ -13,7 +13,7 @@
 // rates) lives in src/data/* and NEVER touches a user profile.
 // ===========================================================================
 
-export const CURRENT_SCHEMA = 5;
+export const CURRENT_SCHEMA = 6;
 
 // Flat in-memory state -> versioned namespaced blob for storage.
 export function serialize(s) {
@@ -23,6 +23,7 @@ export function serialize(s) {
     debts: { hasDebt: s.hasDebt, list: s.debts, mortgage: s.mortgage, car: s.car },
     budget: { expenses: s.expenses, savings: s.savings, pets: s.pets },
     plan: { selected: s.selectedPlan, alloc: s.alloc, locked: s.allocLocked },
+    goals: { primary: s.goals?.primary || "", interests: s.goals?.interests || {} },
   };
 }
 
@@ -39,6 +40,7 @@ export function deserialize(raw) {
     hasDebt: d.hasDebt, debts: d.list, mortgage: d.mortgage, car: d.car,
     expenses: b.expenses, savings: b.savings, pets: b.pets,
     selectedPlan: pl.selected, alloc: pl.alloc, allocLocked: pl.locked,
+    goals: raw.goals,
   });
 }
 
