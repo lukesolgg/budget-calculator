@@ -7,7 +7,7 @@ import { fmt, monthsToStr, buildPlans } from "../lib/engine.js";
 
 const COLOR_BY = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 
-export default function Results({ onBack, onPickPlan }) {
+export default function Results({ onBack, onPickPlan, embedded }) {
   const { state, update } = usePlanner();
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
@@ -25,11 +25,13 @@ export default function Results({ onBack, onPickPlan }) {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <div className="mb-[18px] flex items-center gap-3">
-        <button onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-[#1e2b27] bg-[#101a18] px-[18px] py-2.5 text-sm font-semibold text-ink transition hover:brightness-125">
-          <Chevron dir="left" /> Back to dashboard
-        </button>
-      </div>
+      {!embedded && (
+        <div className="mb-[18px] flex items-center gap-3">
+          <button onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-[#1e2b27] bg-[#101a18] px-[18px] py-2.5 text-sm font-semibold text-ink transition hover:brightness-125">
+            <Chevron dir="left" /> Back to dashboard
+          </button>
+        </div>
+      )}
 
       {/* Top: donut (left) + stats (right) */}
       <div className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-2">

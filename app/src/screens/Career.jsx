@@ -4,7 +4,7 @@ import { usePlanner, monthlyIncomeOf } from "../state.jsx";
 import { fmt } from "../lib/engine.js";
 import { findJob, searchJobs, progressionFrom } from "../data/careers.js";
 
-export default function Career({ onBack }) {
+export default function Career({ onBack, embedded }) {
   const { state, update } = usePlanner();
   const income = monthlyIncomeOf(state);
   const annualIncome = Math.round(income * 12);
@@ -12,11 +12,13 @@ export default function Career({ onBack }) {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <div className="mb-[18px] flex items-center gap-3">
-        <button onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-[#1e2b27] bg-[#101a18] px-[18px] py-2.5 text-sm font-semibold text-ink transition hover:brightness-125">
-          <Chevron dir="left" /> Back to dashboard
-        </button>
-      </div>
+      {!embedded && (
+        <div className="mb-[18px] flex items-center gap-3">
+          <button onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-[#1e2b27] bg-[#101a18] px-[18px] py-2.5 text-sm font-semibold text-ink transition hover:brightness-125">
+            <Chevron dir="left" /> Back to dashboard
+          </button>
+        </div>
+      )}
 
       <header className="mb-6">
         <h1 className="text-[26px] font-extrabold tracking-tight">Career &amp; income</h1>

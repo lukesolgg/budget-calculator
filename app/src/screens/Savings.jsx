@@ -13,7 +13,7 @@ const TYPE_BLURB = {
 };
 const keyOf = (a) => `${a.provider}·${a.name}`;
 
-export default function Savings({ onBack }) {
+export default function Savings({ onBack, embedded }) {
   const { state } = usePlanner();
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
@@ -32,11 +32,13 @@ export default function Savings({ onBack }) {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <div className="mb-[18px] flex items-center gap-3">
-        <button onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-[#1e2b27] bg-[#101a18] px-[18px] py-2.5 text-sm font-semibold text-ink transition hover:brightness-125">
-          <Chevron dir="left" /> Back to dashboard
-        </button>
-      </div>
+      {!embedded && (
+        <div className="mb-[18px] flex items-center gap-3">
+          <button onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-[#1e2b27] bg-[#101a18] px-[18px] py-2.5 text-sm font-semibold text-ink transition hover:brightness-125">
+            <Chevron dir="left" /> Back to dashboard
+          </button>
+        </div>
+      )}
 
       {/* Hero */}
       <Card className="mb-7 overflow-hidden !p-0">

@@ -64,6 +64,18 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Dashboard → SIDEBAR SHELL (Budgetwise-style; build-verified, NOT visually
+  checked). Dashboard.jsx is now a shell: left sidebar of tabs (Overview +
+  goal-ordered sections; live = debt/savings/career, others show a ComingSoon
+  panel). Tabs swap the main panel IN PLACE — Savings/Career/Results now take an
+  `embedded` prop to hide their "Back to dashboard" button; debt tab = Results →
+  (pick plan) → Detail (Detail keeps its "Back to plans"). App.jsx no longer has
+  separate savings/career/results/detail screens — all live inside the shell.
+  New OVERVIEW panel: left = income/expenses donut + Income/Expenses/Left;
+  right column = "This month" (Spent/Left/Budget + progress bar + over/under),
+  "6-month snapshot" (stacked essentials/debt/spare bars; headline = debt
+  paydown while in debt, switches to "set aside £X" when debt-free), and
+  "Retirement" (renamed pot-at-60). Recommendations span full width below.
 - Landing page makeover (Welcome.jsx, pre-login; build-verified, NOT visually
   checked — no headless browser in CI env): full marketing page inspired by
   Budgetwise but in Orcl. dark/green theme. Top nav (logo + Log in + Get
