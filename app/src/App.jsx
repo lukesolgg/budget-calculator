@@ -22,7 +22,7 @@ function Shell() {
   })();
 
   return (
-    <div className="mx-auto max-w-[1240px] px-6 pb-16 pt-8">
+    <div className={`mx-auto px-4 pb-16 pt-6 sm:px-8 ${screen === "dashboard" ? "max-w-[1760px]" : "max-w-[1240px]"}`}>
       <Account
         openSignal={signInSignal}
         showBar={screen !== "welcome"}

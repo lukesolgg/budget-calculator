@@ -64,6 +64,11 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Dashboard layout polish: dashboard breaks out to a wide container (App.jsx
+  max-w 1760 on the dashboard screen only), sidebar hugs the left, Overview grid
+  widened (1.35fr/1fr) with a bigger donut (Donut now takes a `maxW` prop, 520
+  here). Fixed the 6-month snapshot bars rendering as zero-height (bar column
+  needed a real height: parent h-[190px] + flex-1 bar track).
 - Dashboard → SIDEBAR SHELL (Budgetwise-style; build-verified, NOT visually
   checked). Dashboard.jsx is now a shell: left sidebar of tabs (Overview +
   goal-ordered sections; live = debt/savings/career, others show a ComingSoon

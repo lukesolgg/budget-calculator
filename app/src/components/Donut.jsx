@@ -2,7 +2,7 @@ import { fmt, lighten, darken } from "../lib/engine.js";
 
 // Reusable donut chart. `items`: [{ key, name, color, value }]. `total` is the
 // value the full ring represents (the undrawn remainder shows as dark track).
-export default function Donut({ items, total, idPrefix = "d", centerTop, centerBottom = "Monthly income" }) {
+export default function Donut({ items, total, idPrefix = "d", centerTop, centerBottom = "Monthly income", maxW = 420 }) {
   const cx = 100, cy = 100, r = 78, stroke = 18;
   const DEG = Math.PI / 180;
   const ptT = (radius, deg) => [
@@ -48,7 +48,7 @@ export default function Donut({ items, total, idPrefix = "d", centerTop, centerB
   const innerOff = (r - stroke / 2) / rOuter;
 
   return (
-    <div className="relative w-full max-w-[420px]">
+    <div className="relative w-full" style={{ maxWidth: maxW }}>
       <svg viewBox="0 0 200 200" className="block h-auto w-full">
         <defs>
           <filter id={shadowId} x="-30%" y="-30%" width="160%" height="160%">

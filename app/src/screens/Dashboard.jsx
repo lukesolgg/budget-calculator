@@ -30,7 +30,7 @@ export default function Dashboard({ onEdit }) {
   SECTIONS.forEach((s) => { if (!ordered.includes(s.key)) ordered.push(s.key); });
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="w-full">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-sm text-muted">{hello()}, here's your money</div>
@@ -41,9 +41,9 @@ export default function Dashboard({ onEdit }) {
         </button>
       </header>
 
-      <div className="flex flex-col gap-5 md:flex-row">
+      <div className="flex flex-col gap-6 md:flex-row lg:gap-10">
         {/* Sidebar */}
-        <aside className="md:w-[190px] md:shrink-0">
+        <aside className="md:w-[210px] md:shrink-0">
           <nav className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
             <TabBtn label="Overview" emoji="🏠" active={tab === "overview"} onClick={() => go("overview")} />
             {ordered.map((key) => {
@@ -121,15 +121,15 @@ function Overview({ onOpenTab, onEdit }) {
   const recs = buildRecommendations({ debts, income, living, spare, mortgageOn: state.mortgage.on });
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.04fr_.96fr] lg:items-start">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-start xl:gap-8">
       {/* Left: donut + income/expenses/budget */}
-      <Card>
-        <h2 className="mb-1 text-[18px] font-bold">Income &amp; expenses</h2>
-        <p className="mb-4 text-sm text-muted">Where your {fmt(income)} a month goes.</p>
+      <Card className="lg:p-8">
+        <h2 className="mb-1 text-[20px] font-bold">Income &amp; expenses</h2>
+        <p className="mb-5 text-sm text-muted">Where your {fmt(income)} a month goes.</p>
         {expItems.length ? (
           <>
-            <div className="flex justify-center">
-              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="ov" centerTop={fmt(income)} />
+            <div className="flex justify-center py-2">
+              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="ov" centerTop={fmt(income)} maxW={520} />
             </div>
             <div className="mt-5 grid grid-cols-3 gap-2 border-y border-border py-3 text-center">
               <Fig k="Income" v={fmt(income)} />
@@ -234,17 +234,17 @@ function Snapshot6({ income, living, debts, extra, lump, monthlyToDebt, totalDeb
           ? <>Paying <b className="text-ink">{fmt(monthlyToDebt)}</b>/mo, your debt drops from <b className="text-ink">{fmt(totalDebt)}</b> to <b className="text-good">{fmt(endBal)}</b>.</>
           : <>With no debt, you could set aside <b className="text-good">{fmt(totalSaved)}</b> over the next 6 months.</>}
       </p>
-      <div className="flex h-[150px] items-end justify-between gap-2">
+      <div className="flex h-[190px] items-stretch gap-2.5">
         {months.map((m, i) => {
           const h = (v) => `${(v / maxStack) * 100}%`;
           return (
-            <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
-              <div className="flex h-full w-full max-w-[34px] flex-col justify-end overflow-hidden rounded-md bg-[#0a0f17]">
+            <div key={i} className="flex h-full flex-1 flex-col items-center">
+              <div className="flex w-full max-w-[44px] flex-1 flex-col justify-end overflow-hidden rounded-md bg-[#0a0f17]">
                 {m.spare > 0 && <div style={{ height: h(m.spare), background: "#3ad07f" }} title={`Spare ${fmt(m.spare)}`} />}
                 {m.debtPaid > 0 && <div style={{ height: h(m.debtPaid), background: "#f0556f" }} title={`Debt ${fmt(m.debtPaid)}`} />}
-                <div style={{ height: h(m.essentials), background: "#4cb8f0" }} title={`Essentials ${fmt(m.essentials)}`} />
+                <div style={{ height: h(m.essentials), background: "#4cb8f0", minHeight: m.essentials > 0 ? 2 : 0 }} title={`Essentials ${fmt(m.essentials)}`} />
               </div>
-              <span className="text-[11px] text-muted">{m.label}</span>
+              <span className="mt-2 text-[11px] text-muted">{m.label}</span>
             </div>
           );
         })}
