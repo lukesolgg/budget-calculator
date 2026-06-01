@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Card, Chevron } from "../components/ui.jsx";
 import Donut from "../components/Donut.jsx";
-import { usePlanner, monthlyIncomeOf, debtsOf, livingOf, savingsToDeployOf } from "../state.jsx";
+import { usePlanner, monthlyIncomeOf, debtsOf, livingOf } from "../state.jsx";
 import { fmt, monthsToStr, buildPlans, simulateDetailed, monthlyToFreq, freqLabel } from "../lib/engine.js";
 
 // Colour for a 0%-interest window by months remaining: <=3 red, <=6 orange, 6+ green.
@@ -16,14 +16,13 @@ export default function Detail({ planKey, onBack }) {
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
   const living = livingOf(state);
-  const lump = savingsToDeployOf(state);
 
   const freq = state.payFrequency || "monthly";
   const weekly = freq !== "monthly";
   const perPay = (monthly) => fmt(monthlyToFreq(monthly, freq));
   const payWord = freqLabel(freq);
 
-  const { plans } = useMemo(() => buildPlans(debts, income, living, lump), [debts, income, living, lump]);
+  const { plans } = useMemo(() => buildPlans(debts, income, living), [debts, income, living]);
   const plan = plans.find((p) => p.def.key === (state.selectedPlan || planKey)) || plans[0];
 
   // Spare-cash pool above minimum payments.
@@ -69,7 +68,7 @@ export default function Detail({ planKey, onBack }) {
   const editAlloc = () => { update({ allocLocked: false }); setLocked(false); };
 
   const debtPayments = baseToDebt + alloc.extra;
-  const sim = useMemo(() => simulateDetailed(debts, alloc.extra, lump), [debts, alloc.extra, lump]);
+  const sim = useMemo(() => simulateDetailed(debts, alloc.extra), [debts, alloc.extra]);
 
   const allocItems = [
     { key: "living", name: "Living expenses", color: "#4cb8f0", value: living },
@@ -134,7 +133,7 @@ export default function Detail({ planKey, onBack }) {
         {/* Month-by-month milestones (right — replaces the old roadmap) */}
         <Card>
           <h3 className="mb-3.5 font-bold">Month-by-month milestones</h3>
-          <Milestones plan={plan} debts={debts} sim={sim} toDebt={debtPayments} extra={alloc.extra} lump={lump} weekly={weekly} payWord={payWord} freq={freq} />
+          <Milestones plan={plan} debts={debts} sim={sim} toDebt={debtPayments} extra={alloc.extra} weekly={weekly} payWord={payWord} freq={freq} />
         </Card>
       </div>
 
@@ -162,7 +161,7 @@ function Slider({ label, val, color, pct, onChange, disabled }) {
   );
 }
 
-function Milestones({ plan, debts, sim, toDebt, extra, lump, weekly, payWord, freq }) {
+function Milestones({ plan, debts, sim, toDebt, extra, weekly, payWord, freq }) {
   const items = [];
   if (weekly) {
     items.push({ m: "Each " + payWord, win: false, txt: <>You're paid {payWord}ly, so aim to set aside <b className="text-ink">{fmt(monthlyToFreq(toDebt, freq))}</b> toward your debts every {payWord} — that adds up to {fmt(toDebt)}/month.</> });

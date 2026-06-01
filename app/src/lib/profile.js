@@ -21,7 +21,7 @@ export function serialize(s) {
     schemaVersion: CURRENT_SCHEMA,
     profile: { age: s.age, payFrequency: s.payFrequency, income: s.income, jobSoc: s.jobSoc },
     debts: { hasDebt: s.hasDebt, list: s.debts, mortgage: s.mortgage, car: s.car },
-    budget: { expenses: s.expenses, savings: s.savings, pets: s.pets },
+    budget: { expenses: s.expenses, pets: s.pets },
     plan: { selected: s.selectedPlan, alloc: s.alloc, locked: s.allocLocked },
     goals: { primary: s.goals?.primary || "", interests: s.goals?.interests || {} },
   };
@@ -38,7 +38,7 @@ export function deserialize(raw) {
   return strip({
     age: p.age, payFrequency: p.payFrequency, income: p.income, jobSoc: p.jobSoc,
     hasDebt: d.hasDebt, debts: d.list, mortgage: d.mortgage, car: d.car,
-    expenses: b.expenses, savings: b.savings, pets: b.pets,
+    expenses: b.expenses, pets: b.pets,
     selectedPlan: pl.selected, alloc: pl.alloc, allocLocked: pl.locked,
     goals: raw.goals,
   });
@@ -50,7 +50,7 @@ function migrateV1(raw) {
   return strip({
     age: raw.age, payFrequency: raw.payFrequency, income: raw.income,
     hasDebt: raw.hasDebt, debts: raw.debts, mortgage: raw.mortgage,
-    car: raw.car, expenses: raw.expenses, savings: raw.savings,
+    car: raw.car, expenses: raw.expenses,
   });
 }
 

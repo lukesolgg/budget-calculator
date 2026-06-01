@@ -64,6 +64,12 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- REMOVED the "cash on hand / lump sum to clear debt now" feature entirely:
+  dropped state.savings, savingsToDeployOf, the budget.savings namespace
+  (profile serialize/deserialize/migrateV1), and stopped passing `lump` to
+  buildPlans/simulateDetailed in Results/Detail/Dashboard. Old saved blobs with a
+  lump are ignored on load and dropped on next auto-save. (engine.js untouched —
+  it still accepts an optional lump that defaults to 0.)
 - Debt manager on the Debt & budget tab (Results.jsx): "Your debts" card at the
   top lists each debt + total, with "💸 Log a payment" (pick a debt, enter the
   amount → subtracts from its balance, clears at 0) and "＋ Add a debt" (name/

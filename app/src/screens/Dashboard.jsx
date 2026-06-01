@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card } from "../components/ui.jsx";
 import Donut from "../components/Donut.jsx";
 import {
-  usePlanner, monthlyIncomeOf, debtsOf, livingOf, savingsToDeployOf, expenseItemsOf,
+  usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
 } from "../state.jsx";
 import { SECTIONS, sectionByKey } from "../data/sections.js";
 import { fmt, monthsToStr, buildPlans, simulateDetailed, projectRetirement, projectSavings } from "../lib/engine.js";
@@ -95,7 +95,6 @@ function Overview({ onOpenTab, onEdit }) {
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
   const living = livingOf(state);
-  const lump = savingsToDeployOf(state);
   const expItems = expenseItemsOf(state);
   const totalExpenses = expItems.reduce((s, c) => s + c.value, 0);
   const minTotal = debts.reduce((s, d) => s + d.min, 0);
@@ -104,7 +103,7 @@ function Overview({ onOpenTab, onEdit }) {
   const leftover = income - spentOut;          // can be negative (over budget)
   const spare = Math.max(0, leftover);
 
-  const { plans } = useMemo(() => buildPlans(debts, income, living, lump), [debts, income, living, lump]);
+  const { plans } = useMemo(() => buildPlans(debts, income, living), [debts, income, living]);
   // Snapshot uses the Accelerated plan (plan 2): a chunk to debt now, the rest
   // building savings — shifting fully to savings once debt-free.
   const accel = plans.find((p) => p.def.key === "accelerated") || plans[0];
@@ -154,7 +153,7 @@ function Overview({ onOpenTab, onEdit }) {
       {/* Right column */}
       <div className="flex flex-col gap-4">
         <MonthlyFigures income={income} spent={spentOut} leftover={leftover} />
-        <Snapshot6 income={income} living={living} debts={debts} extra={accel ? accel.extra : 0} lump={lump} monthlyToDebt={accel ? accel.monthly : 0} totalDebt={totalDebt} />
+        <Snapshot6 income={income} living={living} debts={debts} extra={accel ? accel.extra : 0} monthlyToDebt={accel ? accel.monthly : 0} totalDebt={totalDebt} />
         <RetirementCard retire={retire} age={age} />
       </div>
 
@@ -201,10 +200,10 @@ function MonthlyFigures({ income, spent, leftover }) {
 
 const SNAP_RANGES = [{ n: 3, label: "3m" }, { n: 6, label: "6m" }, { n: 12, label: "1y" }];
 
-function Snapshot6({ income, living, debts, extra, lump, monthlyToDebt, totalDebt }) {
+function Snapshot6({ income, living, debts, extra, monthlyToDebt, totalDebt }) {
   const [n, setN] = useState(6);
   const hasDebt = debts.length > 0;
-  const sim = useMemo(() => (hasDebt ? simulateDetailed(debts, extra, lump) : null), [debts, extra, lump, hasDebt]);
+  const sim = useMemo(() => (hasDebt ? simulateDetailed(debts, extra) : null), [debts, extra, hasDebt]);
   const essentials = living;
 
   const now = new Date();

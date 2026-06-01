@@ -42,7 +42,6 @@ export const initialState = {
   mortgage: { on: false, payment: "", balance: "", rate: "" },
   car: { owns: false, on: false, balance: "", payment: "", rate: "" },
   pets: { on: false },
-  savings: { total: "", use: "" },
   expenses: {}, // key -> string value
   // Debt-plan choices (remembered):
   selectedPlan: "",        // "" | balanced | accelerated | avalanche
@@ -75,7 +74,6 @@ export function hydrate(flat) {
     mortgage: { ...initialState.mortgage, ...(flat.mortgage || {}) },
     car,
     pets,
-    savings: { ...initialState.savings, ...(flat.savings || {}) },
     goals: { primary: flat.goals?.primary || "", interests: flat.goals?.interests || {} },
     debts: flat.debts && flat.debts.length ? flat.debts : initialState.debts,
     expenses,
@@ -158,12 +156,6 @@ export function livingOf(s) {
   if (s.mortgage.on) living += Math.max(0, parseFloat(s.mortgage.payment) || 0);
   return living;
 }
-
-export const savingsToDeployOf = (s) => {
-  const total = Math.max(0, parseFloat(s.savings.total) || 0);
-  const use = Math.max(0, parseFloat(s.savings.use) || 0);
-  return Math.min(use, total);
-};
 
 // Expense items (incl. mortgage) for the chart.
 export function expenseItemsOf(s) {

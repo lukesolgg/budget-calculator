@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Card, Chevron, MoneyInput } from "../components/ui.jsx";
 import Donut from "../components/Donut.jsx";
 import {
-  usePlanner, monthlyIncomeOf, debtsOf, livingOf, savingsToDeployOf, expenseItemsOf,
+  usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
 } from "../state.jsx";
 import { fmt, monthsToStr, buildPlans } from "../lib/engine.js";
 
@@ -13,14 +13,13 @@ export default function Results({ onBack, onPickPlan, embedded }) {
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
   const living = livingOf(state);
-  const lump = savingsToDeployOf(state);
   const noDebt = debts.length === 0;
 
   const expItems = expenseItemsOf(state);
   const totalExpenses = expItems.reduce((s, c) => s + c.value, 0);
   const leftover = income - totalExpenses;
 
-  const { plans, available, minTotal, surplus } = buildPlans(debts, income, living, lump);
+  const { plans, available, minTotal, surplus } = buildPlans(debts, income, living);
 
   const pick = (k) => { update({ selectedPlan: k }); onPickPlan(k); };
 
