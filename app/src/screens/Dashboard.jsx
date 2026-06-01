@@ -31,19 +31,14 @@ export default function Dashboard({ onEdit }) {
 
   return (
     <div className="w-full">
-      <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="text-sm text-muted">{hello()}, here's your money</div>
-          <h1 className="mt-0.5 text-[24px] font-extrabold tracking-tight">Orcl. hub</h1>
-        </div>
-        <button onClick={onEdit} className="rounded-xl border border-[#1e2b27] bg-[#101a18] px-3.5 py-2 text-[13px] font-semibold text-ink transition hover:brightness-125">
-          Edit my details
-        </button>
+      <header className="mb-4">
+        <div className="text-[13px] text-muted">{hello()}, here's your money</div>
+        <h1 className="text-[22px] font-extrabold tracking-tight">Orcl. hub</h1>
       </header>
 
-      <div className="flex flex-col gap-6 md:flex-row lg:gap-10">
+      <div className="flex flex-col gap-6 md:flex-row lg:gap-9">
         {/* Sidebar */}
-        <aside className="md:w-[210px] md:shrink-0">
+        <aside className="md:w-[200px] md:shrink-0">
           <nav className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
             <TabBtn label="Overview" emoji="🏠" active={tab === "overview"} onClick={() => go("overview")} />
             {ordered.map((key) => {
@@ -56,6 +51,9 @@ export default function Dashboard({ onEdit }) {
                 />
               );
             })}
+            <button onClick={onEdit} className="mt-1 flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-[13px] font-semibold text-muted transition hover:bg-[#0c1a15] hover:text-ink md:mt-3 md:border-t md:border-border md:pt-3.5">
+              <span className="text-base">⚙️</span><span className="whitespace-nowrap">Edit my details</span>
+            </button>
           </nav>
         </aside>
 
@@ -107,7 +105,9 @@ function Overview({ onOpenTab, onEdit }) {
   const spare = Math.max(0, leftover);
 
   const { plans } = useMemo(() => buildPlans(debts, income, living, lump), [debts, income, living, lump]);
-  const active = plans.find((p) => p.def.key === state.selectedPlan) || plans[0];
+  // Snapshot uses the Accelerated plan (plan 2): a chunk to debt now, the rest
+  // building savings — shifting fully to savings once debt-free.
+  const accel = plans.find((p) => p.def.key === "accelerated") || plans[0];
   const balanced = plans.find((p) => p.def.key === "balanced") || plans[0];
 
   const age = parseInt(state.age, 10);
@@ -121,30 +121,35 @@ function Overview({ onOpenTab, onEdit }) {
   const recs = buildRecommendations({ debts, income, living, spare, mortgageOn: state.mortgage.on });
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-start xl:gap-8">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-8">
       {/* Left: donut + income/expenses/budget */}
       <Card className="lg:p-8">
         <h2 className="mb-1 text-[20px] font-bold">Income &amp; expenses</h2>
         <p className="mb-5 text-sm text-muted">Where your {fmt(income)} a month goes.</p>
         {expItems.length ? (
-          <>
-            <div className="flex justify-center py-2">
-              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="ov" centerTop={fmt(income)} maxW={520} />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-center xl:gap-10">
+            <div className="flex justify-center">
+              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="ov" centerTop={fmt(income)} maxW={440} />
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-2 border-y border-border py-3 text-center">
-              <Fig k="Income" v={fmt(income)} />
-              <Fig k="Expenses" v={fmt(living)} tone="bad" />
-              <Fig k="Left" v={fmt(leftover)} tone={leftover >= 0 ? "good" : "bad"} />
+            <div>
+              <div className="grid grid-cols-3 gap-2 border-b border-border pb-4 text-center">
+                <Fig k="Income" v={fmt(income)} />
+                <Fig k="Expenses" v={fmt(living)} tone="bad" />
+                <Fig k="Left" v={fmt(leftover)} tone={leftover >= 0 ? "good" : "bad"} />
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2">
+                {expItems.map((c) => (
+                  <span key={c.key} className="inline-flex items-center justify-between gap-2 text-[13px]">
+                    <span className="inline-flex items-center gap-2 text-muted">
+                      <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
+                      {c.name}
+                    </span>
+                    <b className="text-ink tabular-nums">{fmt(c.value)}</b>
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
-              {expItems.map((c) => (
-                <span key={c.key} className="inline-flex items-center gap-2 text-[12px] text-muted">
-                  <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
-                  {c.name} <b className="text-ink">{fmt(c.value)}</b>
-                </span>
-              ))}
-            </div>
-          </>
+          </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
             Add your budget to see the breakdown.
@@ -156,7 +161,7 @@ function Overview({ onOpenTab, onEdit }) {
       {/* Right column */}
       <div className="flex flex-col gap-5">
         <MonthlyFigures income={income} spent={spentOut} leftover={leftover} />
-        <Snapshot6 income={income} living={living} debts={debts} extra={active ? active.extra : 0} lump={lump} monthlyToDebt={active ? active.monthly : 0} totalDebt={totalDebt} />
+        <Snapshot6 income={income} living={living} debts={debts} extra={accel ? accel.extra : 0} lump={lump} monthlyToDebt={accel ? accel.monthly : 0} totalDebt={totalDebt} />
         <RetirementCard retire={retire} age={age} />
       </div>
 
@@ -187,64 +192,90 @@ function Fig({ k, v, tone }) {
 function MonthlyFigures({ income, spent, leftover }) {
   const pct = income > 0 ? Math.min(100, Math.round((spent / income) * 100)) : 0;
   const over = leftover < 0;
+  const C = ({ k, v, tone }) => (
+    <div>
+      <div className={`text-[15px] font-extrabold tabular-nums ${tone === "bad" ? "text-bad" : tone === "good" ? "text-good" : "text-ink"}`}>{v}</div>
+      <div className="text-[9px] uppercase tracking-[.06em] text-muted">{k}</div>
+    </div>
+  );
   return (
-    <Card>
-      <h3 className="mb-3 font-bold">This month</h3>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <Fig k="Spent" v={fmt(spent)} tone="bad" />
-        <Fig k="Left" v={fmt(Math.max(0, leftover))} tone="good" />
-        <Fig k="Budget" v={fmt(income)} />
+    <div className="rounded-2xl border border-border bg-gradient-to-b from-panel to-panel2 p-4">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h3 className="text-[14px] font-bold">This month</h3>
+        <span className={`text-[12px] font-semibold ${over ? "text-bad" : "text-good"}`}>{over ? `${fmt(-leftover)} over` : `${fmt(leftover)} under budget`}</span>
       </div>
-      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#0a0f17]">
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <C k="Spent" v={fmt(spent)} tone="bad" />
+        <C k="Left" v={fmt(Math.max(0, leftover))} tone="good" />
+        <C k="Budget" v={fmt(income)} />
+      </div>
+      <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#0a0f17]">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: over ? "#f0556f" : "linear-gradient(90deg,#12b886,#2fe6a6)" }} />
       </div>
-      <div className={`mt-2 text-[13px] font-semibold ${over ? "text-bad" : "text-good"}`}>
-        {over ? `${fmt(-leftover)} over budget` : `${fmt(leftover)} under budget`}
-      </div>
-    </Card>
+    </div>
   );
 }
 
+const SNAP_RANGES = [{ n: 3, label: "3m" }, { n: 6, label: "6m" }, { n: 12, label: "1y" }];
+
 function Snapshot6({ income, living, debts, extra, lump, monthlyToDebt, totalDebt }) {
+  const [n, setN] = useState(6);
   const hasDebt = debts.length > 0;
   const sim = useMemo(() => (hasDebt ? simulateDetailed(debts, extra, lump) : null), [debts, extra, lump, hasDebt]);
+  const essentials = living;
 
   const now = new Date();
-  const months = Array.from({ length: 6 }, (_, i) => {
+  const months = Array.from({ length: n }, (_, i) => {
     const label = new Date(now.getFullYear(), now.getMonth() + i, 1).toLocaleString("en-GB", { month: "short" });
+    const inDebt = sim && i < sim.schedule.length;
     let debtPaid = 0, bal = 0;
-    if (sim && i < sim.schedule.length) {
+    if (inDebt) {
       debtPaid = sim.schedule[i].pay.reduce((s, p) => s + p, 0);
       bal = sim.schedule[i].bal.reduce((s, b) => s + b, 0);
     }
-    const essentials = living;
-    const sparePart = Math.max(0, income - essentials - debtPaid);
-    return { label, essentials, debtPaid, spare: sparePart, bal };
+    // Anything not spent on essentials/debt goes to savings & spare.
+    const saved = Math.max(0, income - essentials - debtPaid);
+    return { label, essentials, debtPaid, saved, bal };
   });
 
-  const maxStack = Math.max(income, ...months.map((m) => m.essentials + m.debtPaid + m.spare), 1);
-  const endBal = hasDebt ? months[5].bal : 0;
-  const totalSaved = months.reduce((s, m) => s + m.spare, 0);
+  const maxStack = Math.max(income, ...months.map((m) => m.essentials + m.debtPaid + m.saved), 1);
+  const clearsWithin = hasDebt && sim && sim.schedule.length <= n;
+  const endBal = hasDebt ? months[n - 1].bal : 0;
+  const totalSaved = months.reduce((s, m) => s + m.saved, 0);
+  const rangeWord = n === 12 ? "a year" : `${n} months`;
+  const thin = n > 6;
 
   return (
     <Card>
-      <h3 className="mb-1 font-bold">6-month snapshot</h3>
-      <p className="mb-3 text-[13px] text-muted">
-        {hasDebt
-          ? <>Paying <b className="text-ink">{fmt(monthlyToDebt)}</b>/mo, your debt drops from <b className="text-ink">{fmt(totalDebt)}</b> to <b className="text-good">{fmt(endBal)}</b>.</>
-          : <>With no debt, you could set aside <b className="text-good">{fmt(totalSaved)}</b> over the next 6 months.</>}
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <h3 className="font-bold">Snapshot</h3>
+        <div className="flex gap-1 rounded-lg border border-border bg-[#0a0f17] p-0.5">
+          {SNAP_RANGES.map((r) => (
+            <button key={r.n} onClick={() => setN(r.n)}
+              className={`rounded-md px-2 py-0.5 text-[11px] font-semibold transition ${n === r.n ? "bg-[#1c2738] text-ink" : "text-muted hover:text-ink"}`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mb-3 text-[13px] leading-snug text-muted">
+        {!hasDebt
+          ? <>No debt — on a 50/30/20 split you'd save about <b className="text-good">{fmt(totalSaved)}</b> over {rangeWord}.</>
+          : clearsWithin
+          ? <>You're debt-free in <b className="text-ink">{monthsToStr(sim.months)}</b> — then your money shifts to a 50/30/20 savings split.</>
+          : <>Paying <b className="text-ink">{fmt(monthlyToDebt)}</b>/mo, your debt drops from <b className="text-ink">{fmt(totalDebt)}</b> to <b className="text-good">{fmt(endBal)}</b> over {rangeWord}.</>}
       </p>
-      <div className="flex h-[190px] items-stretch gap-2.5">
+      <div className={`flex h-[180px] items-stretch ${thin ? "gap-1" : "gap-2"}`}>
         {months.map((m, i) => {
           const h = (v) => `${(v / maxStack) * 100}%`;
           return (
             <div key={i} className="flex h-full flex-1 flex-col items-center">
-              <div className="flex w-full max-w-[44px] flex-1 flex-col justify-end overflow-hidden rounded-md bg-[#0a0f17]">
-                {m.spare > 0 && <div style={{ height: h(m.spare), background: "#3ad07f" }} title={`Spare ${fmt(m.spare)}`} />}
+              <div className="flex w-full flex-1 flex-col justify-end overflow-hidden rounded-md bg-[#0a0f17]">
+                {m.saved > 0 && <div style={{ height: h(m.saved), background: "#3ad07f" }} title={`Savings/spare ${fmt(m.saved)}`} />}
                 {m.debtPaid > 0 && <div style={{ height: h(m.debtPaid), background: "#f0556f" }} title={`Debt ${fmt(m.debtPaid)}`} />}
                 <div style={{ height: h(m.essentials), background: "#4cb8f0", minHeight: m.essentials > 0 ? 2 : 0 }} title={`Essentials ${fmt(m.essentials)}`} />
               </div>
-              <span className="mt-2 text-[11px] text-muted">{m.label}</span>
+              {(!thin || i % 2 === 0) && <span className="mt-2 text-[10px] text-muted">{m.label}</span>}
             </div>
           );
         })}
@@ -252,7 +283,7 @@ function Snapshot6({ income, living, debts, extra, lump, monthlyToDebt, totalDeb
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
         <Legend c="#4cb8f0" t="Essentials" />
         {hasDebt && <Legend c="#f0556f" t="Debt" />}
-        <Legend c="#3ad07f" t={hasDebt ? "Spare" : "Saved"} />
+        <Legend c="#3ad07f" t="Savings / spare" />
       </div>
     </Card>
   );

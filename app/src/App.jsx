@@ -22,7 +22,7 @@ function Shell() {
   })();
 
   return (
-    <div className={`mx-auto px-4 pb-16 pt-6 sm:px-8 ${screen === "dashboard" ? "max-w-[1760px]" : "max-w-[1240px]"}`}>
+    <div className={`mx-auto px-4 pb-16 pt-6 sm:px-6 ${screen === "dashboard" ? "max-w-[1840px]" : "max-w-[1240px]"}`}>
       <Account
         openSignal={signInSignal}
         showBar={screen !== "welcome"}
