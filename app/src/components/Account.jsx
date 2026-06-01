@@ -1,78 +1,51 @@
 import { useEffect, useState } from "react";
 import { Button } from "./ui.jsx";
-import { backend, useSupabase } from "../lib/accounts.js";
-import { usePlanner, toStored, fromStored } from "../state.jsx";
+import { useSupabase } from "../lib/accounts.js";
+import { useAuth } from "../lib/auth.jsx";
 
-// Account bar (top-right) + auth modal. Handles signup/login/save and syncs
-// the planner state to the cloud.
-export default function Account({ openSignal, showBar = true, onLogout }) {
-  const { state, setState } = usePlanner();
-  const [session, setSession] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem("dfp_session") || "null"); } catch { return null; }
-  });
-  const [modal, setModal] = useState(null); // null | "login" | "signup"
-  const [dirty, setDirty] = useState(false);
-  const [status, setStatus] = useState("");
+// Account bar (top-right) + sign-in modal. Progress auto-saves to the cloud
+// while signed in (no manual Save button).
+export default function Account({ openSignal, showBar = true, onLogout, onSignedIn }) {
+  const { session, saveState, login, logout } = useAuth();
+  const [modal, setModal] = useState(false);
 
-  // Mark dirty whenever state changes while signed in.
-  useEffect(() => { if (session) setDirty(true); }, [state]); // eslint-disable-line
-
-  // Parent can request the modal (e.g. the welcome "sign in" button).
-  useEffect(() => { if (openSignal) setModal("login"); }, [openSignal]);
-
-  const persistSession = (s) => {
-    setSession(s);
-    if (s) sessionStorage.setItem("dfp_session", JSON.stringify(s));
-    else sessionStorage.removeItem("dfp_session");
-  };
-
-  const flash = (msg) => { setStatus(msg); setTimeout(() => setStatus(""), 2600); };
-
-  const doSave = async () => {
-    if (!session) return;
-    const res = await backend.save(session.username, session.pin, toStored(state));
-    if (res.ok) { setDirty(false); flash("Saved ✓"); }
-    else flash(res.error || "Save failed");
-  };
+  // Parent can request the sign-in modal (e.g. the welcome "sign in" button).
+  useEffect(() => { if (openSignal) setModal(true); }, [openSignal]);
 
   return (
     <>
       {showBar && (
-      <div className="mb-2.5 flex min-h-[36px] flex-wrap items-center justify-end gap-2.5">
-        {status && <span className="text-[12px] text-good">{status}</span>}
-        {session ? (
-          <>
-            {dirty
-              ? <span className="inline-flex items-center gap-1.5 text-[12px] text-warn"><span className="h-2 w-2 rounded-full bg-warn shadow-[0_0_0_3px_rgba(240,184,106,.18)]" />Unsaved changes</span>
-              : <span className="inline-flex items-center gap-1.5 text-[12px] text-good"><span className="h-2 w-2 rounded-full bg-good" />All changes saved</span>}
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-good" />{session.username}</span>
-            <Button onClick={doSave} className={`px-3.5 py-2 text-[13px] ${dirty ? "shadow-[0_0_0_2px_rgba(240,184,106,.5),0_6px_18px_rgba(18,184,134,.35)]" : ""}`}>Save progress</Button>
-            <Button variant="ghost" onClick={() => { persistSession(null); flash("Logged out"); onLogout?.(); }} className="px-3.5 py-2 text-[13px]">Log out</Button>
-          </>
-        ) : null}
-      </div>
+        <div className="mb-2.5 flex min-h-[36px] flex-wrap items-center justify-end gap-2.5">
+          {session ? (
+            <>
+              <SaveStatus state={saveState} />
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-good" />{session.username}</span>
+              <Button variant="ghost" onClick={() => { logout(); onLogout?.(); }} className="px-3.5 py-2 text-[13px]">Log out</Button>
+            </>
+          ) : null}
+        </div>
       )}
 
       {modal && (
-        <AuthModal
-          mode={modal}
-          onClose={() => setModal(null)}
-          onSwitch={(m) => setModal(m)}
-          onAuthed={(username, pin, data) => {
-            persistSession({ username, pin });
-            if (data) setState(fromStored(data));
-            setDirty(false);
-            setModal(null);
-            flash(data ? "Signed in — plan loaded ✓" : "Account created ✓");
-          }}
-          getState={() => toStored(state)}
+        <SignInModal
+          onClose={() => setModal(false)}
+          onSignedIn={() => { setModal(false); onSignedIn?.(); }}
+          login={login}
         />
       )}
     </>
   );
 }
 
-function AuthModal({ mode, onClose, onSwitch, onAuthed, getState }) {
+function SaveStatus({ state }) {
+  if (state === "saving")
+    return <span className="inline-flex items-center gap-1.5 text-[12px] text-muted"><span className="h-2 w-2 animate-pulse rounded-full bg-muted" />Saving…</span>;
+  if (state === "error")
+    return <span className="inline-flex items-center gap-1.5 text-[12px] text-warn"><span className="h-2 w-2 rounded-full bg-warn" />Save failed — retrying</span>;
+  return <span className="inline-flex items-center gap-1.5 text-[12px] text-good"><span className="h-2 w-2 rounded-full bg-good" />All changes saved</span>;
+}
+
+function SignInModal({ onClose, onSignedIn, login }) {
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -85,15 +58,9 @@ function AuthModal({ mode, onClose, onSwitch, onAuthed, getState }) {
     if (!/^\d{4,6}$/.test(pin)) return setErr("PIN must be 4–6 digits.");
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const res = await backend.signup(u, pin, getState());
-        if (!res.ok) return setErr(res.error);
-        onAuthed(u, pin, null);
-      } else {
-        const res = await backend.login(u, pin);
-        if (!res.ok) return setErr(res.error);
-        onAuthed(u, pin, res.data);
-      }
+      const res = await login(u, pin);
+      if (!res.ok) return setErr(res.error);
+      onSignedIn();
     } catch { setErr("Something went wrong. Please try again."); }
     finally { setBusy(false); }
   };
@@ -102,27 +69,20 @@ function AuthModal({ mode, onClose, onSwitch, onAuthed, getState }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(4,7,12,.72)] p-5 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="relative w-full max-w-[440px] rounded-[18px] border border-border bg-gradient-to-b from-panel to-panel2 p-[26px]">
         <button onClick={onClose} className="absolute right-4 top-3.5 text-[26px] leading-none text-muted hover:text-ink">×</button>
-        <h3 className="mb-1 text-[21px] font-bold">{mode === "login" ? "Welcome back" : "Create your account"}</h3>
-        <p className="mb-5 text-sm text-muted">Anonymous accounts — just a username &amp; PIN. Save your plan and pick up on any device.</p>
-
-        <div className="mb-5 flex gap-1.5 rounded-xl border border-border bg-[#0c121d] p-1">
-          {["login", "signup"].map((m) => (
-            <button key={m} onClick={() => onSwitch(m)}
-              className={`flex-1 rounded-[9px] py-2.5 text-sm font-semibold ${mode === m ? "bg-[#1c2738] text-ink" : "text-muted"}`}>
-              {m === "login" ? "Sign in" : "Create account"}
-            </button>
-          ))}
-        </div>
+        <h3 className="mb-1 text-[21px] font-bold">Welcome back</h3>
+        <p className="mb-5 text-sm text-muted">Sign in with the username &amp; PIN you set up. We'll take you straight to your dashboard.</p>
 
         <label className="mb-1.5 block text-[12px] uppercase tracking-[.06em] text-muted">Username</label>
         <input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={24} autoComplete="off"
+          onKeyDown={(e) => e.key === "Enter" && submit()}
           className="mb-4 w-full rounded-[10px] border border-border bg-[#0c121d] px-3.5 py-3 text-base text-ink outline-none focus:border-accent" placeholder="e.g. luke_money" />
         <label className="mb-1.5 block text-[12px] uppercase tracking-[.06em] text-muted">PIN (4–6 digits)</label>
         <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} maxLength={6} inputMode="numeric" autoComplete="off"
+          onKeyDown={(e) => e.key === "Enter" && submit()}
           className="mb-4 w-full rounded-[10px] border border-border bg-[#0c121d] px-3.5 py-3 text-base text-ink outline-none focus:border-accent" placeholder="••••" />
 
         <div className="mb-3.5 min-h-[16px] text-[13px] text-bad">{err}</div>
-        <Button onClick={submit} disabled={busy} className="w-full">{busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account & save"}</Button>
+        <Button onClick={submit} disabled={busy} className="w-full">{busy ? "Please wait…" : "Sign in"}</Button>
         <div className="mt-3.5 text-center text-[11px] text-muted">{useSupabase ? "Synced securely across devices." : "Demo mode: saved in this browser only."}</div>
       </div>
     </div>

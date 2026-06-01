@@ -3,54 +3,165 @@ import { Button, Choice, MoneyInput, Chevron } from "../components/ui.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, DEBT_PLACEHOLDERS, MAX_DEBTS,
 } from "../state.jsx";
+import { useAuth } from "../lib/auth.jsx";
 import { fmt } from "../lib/engine.js";
 
-const STEPS = ["age", "freq", "income", "mortgage", "car", "debts"];
-
-export default function Wizard({ onDone, onExitTop }) {
+export default function Wizard({ firstRun, onDone, onExitTop }) {
   const { state, update } = usePlanner();
-  const [idx, setIdx] = useState(0);
-  const step = STEPS[idx];
+  const { session, signup } = useAuth();
   const income = monthlyIncomeOf(state);
   const validDebts = debtsOf(state).length;
 
-  const next = () => {
+  // Whether onboarding opens with the account step. Captured once: a new user
+  // has no session at entry, and we keep the step in the list even after signup
+  // so the step indices don't shift mid-flow.
+  const includeAccount = useRef(firstRun && !session).current;
+
+  // Dynamic step list. Car-loan details only appear if they own a car.
+  const steps = [];
+  if (includeAccount) steps.push("account");
+  steps.push("age", "freq", "income", "mortgage", "carown");
+  if (state.car.owns) steps.push("car");
+  steps.push("pets", "debts");
+
+  const [idx, setIdx] = useState(0);
+  const safeIdx = Math.min(idx, steps.length - 1);
+  const step = steps[safeIdx];
+  const lastStep = safeIdx === steps.length - 1;
+
+  // Local state for the account-creation step.
+  const [acct, setAcct] = useState({ username: "", pin: "", err: "", busy: false });
+
+  const next = async () => {
     if (step === "income" && income <= 0) return;
     if (step === "age") {
       const a = parseInt(state.age, 10);
       if (!a || a < 16 || a > 100) return;
     }
-    if (idx < STEPS.length - 1) setIdx(idx + 1);
+    if (step === "account" && !session) {
+      const u = acct.username.trim().toLowerCase();
+      if (!/^[a-z0-9_]{3,24}$/.test(u)) return setAcct((s) => ({ ...s, err: "Username: 3–24 letters, numbers or underscores." }));
+      if (!/^\d{4,6}$/.test(acct.pin)) return setAcct((s) => ({ ...s, err: "PIN must be 4–6 digits." }));
+      setAcct((s) => ({ ...s, busy: true, err: "" }));
+      const res = await signup(u, acct.pin);
+      if (!res.ok) return setAcct((s) => ({ ...s, busy: false, err: res.error }));
+      setAcct((s) => ({ ...s, busy: false }));
+    }
+    if (safeIdx < steps.length - 1) setIdx(safeIdx + 1);
     else onDone();
   };
-  const back = () => (idx > 0 ? setIdx(idx - 1) : onExitTop());
+  const back = () => (safeIdx > 0 ? setIdx(safeIdx - 1) : onExitTop());
 
   return (
     <div className="mx-auto mt-[4vh] max-w-[600px] md:max-w-[760px] lg:max-w-[900px]">
       <div className="mb-7 h-1.5 overflow-hidden rounded-full bg-[#1a2230]">
         <div
           className="h-full rounded-full bg-gradient-to-r from-[#3b86ff] to-[#4ea8ff] transition-[width] duration-300"
-          style={{ width: `${((idx + 1) / STEPS.length) * 100}%` }}
+          style={{ width: `${((safeIdx + 1) / steps.length) * 100}%` }}
         />
       </div>
 
       <div key={step} className="animate-pop">
+        {step === "account" && <AccountStep acct={acct} setAcct={setAcct} session={session} />}
         {step === "age" && <AgeStep state={state} update={update} />}
         {step === "freq" && <FreqStep state={state} update={update} />}
         {step === "income" && <IncomeStep state={state} update={update} income={income} />}
         {step === "mortgage" && <MortgageStep state={state} update={update} />}
+        {step === "carown" && <CarOwnStep state={state} update={update} />}
         {step === "car" && <CarStep state={state} update={update} />}
+        {step === "pets" && <PetsStep state={state} update={update} />}
         {step === "debts" && <DebtsStep state={state} update={update} validDebts={validDebts} />}
       </div>
 
       <div className="mt-[30px] flex gap-3">
         <Button variant="ghost" onClick={back}>Back</Button>
         <div className="flex-1" />
-        <Button onClick={next}>
-          {idx === STEPS.length - 1 ? "Continue to budget" : "Continue"} <Chevron />
+        <Button onClick={next} disabled={acct.busy}>
+          {step === "account" && !session
+            ? (acct.busy ? "Creating…" : "Create account")
+            : lastStep ? "Continue to budget" : "Continue"}
+          {!(step === "account" && acct.busy) && <Chevron />}
         </Button>
       </div>
     </div>
+  );
+}
+
+function AccountStep({ acct, setAcct, session }) {
+  if (session) {
+    return (
+      <>
+        <StepHead kicker="Your account" title="You're all set" sub="Your progress now saves automatically to this account." />
+        <div className="mx-auto max-w-[420px] rounded-2xl border border-[#1f5c3a] bg-[#11301f] px-4 py-5 text-center text-[15px]">
+          Signed in as <b className="text-good">{session.username}</b> ✓
+        </div>
+      </>
+    );
+  }
+  const set = (patch) => setAcct((s) => ({ ...s, ...patch, err: "" }));
+  return (
+    <>
+      <StepHead
+        kicker="First, secure your progress"
+        title="Create your account"
+        sub="Pick a username & PIN so you can log back into your plan on any device. No email needed."
+      />
+      <div className="mx-auto max-w-[420px]">
+        <div className="mb-4">
+          <Field label="Username">
+            <input value={acct.username} onChange={(e) => set({ username: e.target.value })} maxLength={24} autoComplete="off"
+              placeholder="e.g. luke_money"
+              className="w-full rounded-[10px] border border-border bg-[#0c121d] px-3.5 py-3 text-base text-ink outline-none focus:border-accent" />
+          </Field>
+        </div>
+        <div className="mb-3">
+          <Field label="PIN (4–6 digits)">
+            <input value={acct.pin} onChange={(e) => set({ pin: e.target.value.replace(/\D/g, "") })} maxLength={6} inputMode="numeric" autoComplete="off"
+              placeholder="••••"
+              className="w-full rounded-[10px] border border-border bg-[#0c121d] px-3.5 py-3 text-base text-ink outline-none focus:border-accent" />
+          </Field>
+        </div>
+        <div className="min-h-[18px] text-[13px] text-bad">{acct.err}</div>
+        <p className="mt-1 text-[12px] leading-relaxed text-muted">Anonymous &amp; free. Your PIN protects your data — keep it safe, it can't be recovered.</p>
+      </div>
+    </>
+  );
+}
+
+function CarOwnStep({ state, update }) {
+  const setCar = (patch) => update((s) => ({ ...s, car: { ...s.car, ...patch } }));
+  return (
+    <>
+      <StepHead
+        kicker="Your situation"
+        title="Do you own a car?"
+        sub="Paid off or on finance, either counts. This decides whether we budget for petrol & car insurance."
+      />
+      <YesNo
+        value={state.car.owns}
+        onChange={(v) => setCar(v ? { owns: true } : { owns: false, on: false })}
+        yes={{ emoji: "🚗", title: "Yes", desc: "I own / run a car" }}
+        no={{ emoji: "🚶", title: "No", desc: "No car" }}
+      />
+    </>
+  );
+}
+
+function PetsStep({ state, update }) {
+  return (
+    <>
+      <StepHead
+        kicker="Your situation"
+        title="Do you have any pets?"
+        sub="So we include pet food & insurance in your budget."
+      />
+      <YesNo
+        value={state.pets.on}
+        onChange={(v) => update((s) => ({ ...s, pets: { ...s.pets, on: v } }))}
+        yes={{ emoji: "🐾", title: "Yes", desc: "I have pets" }}
+        no={{ emoji: "🚫", title: "No", desc: "No pets" }}
+      />
+    </>
   );
 }
 
@@ -96,19 +207,24 @@ function AgeStep({ state, update }) {
   );
 }
 
-// iOS/Android-style wheel. Native momentum scroll (drag/throw on mobile, wheel
-// on desktop) with snap; no visible scrollbar. The item under the centre band
-// is the selected value.
+// iOS/Android-style wheel. Mobile uses native momentum touch-scroll; desktop
+// adds click-and-drag (hold and pull up/down) plus the mouse wheel. Snapping is
+// done in JS so it works the same for both. No visible scrollbar.
 const ITEM_H = 48;
 const PAD_ITEMS = 2; // items of padding so first/last can reach the centre
 
 function WheelPicker({ values, value, onChange, renderLabel = (v) => v }) {
   const ref = useRef(null);
   const settle = useRef(null);
+  const drag = useRef(null);   // active mouse drag: { startY, startTop, moved, id }
+  const moved = useRef(false);  // suppress the click that follows a drag
   const selIndex = Math.max(0, values.indexOf(value));
   const [centre, setCentre] = useState(selIndex);
 
-  // Position the wheel on the current value when it changes from outside a scroll.
+  const clampIdx = (i) => Math.max(0, Math.min(values.length - 1, i));
+  const nearestIdx = () => clampIdx(Math.round((ref.current?.scrollTop || 0) / ITEM_H));
+
+  // Position the wheel on the current value when it changes from outside.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -117,23 +233,52 @@ function WheelPicker({ values, value, onChange, renderLabel = (v) => v }) {
     setCentre(selIndex);
   }, [selIndex]);
 
+  const snapTo = (idx) => {
+    const el = ref.current;
+    if (!el) return;
+    const target = idx * ITEM_H;
+    if (Math.abs(el.scrollTop - target) > 1) el.scrollTo({ top: target, behavior: "smooth" });
+    const v = values[idx];
+    if (v !== value) onChange(v);
+  };
+
   const onScroll = () => {
     const el = ref.current;
     if (!el) return;
-    const idx = Math.max(0, Math.min(values.length - 1, Math.round(el.scrollTop / ITEM_H)));
+    const idx = clampIdx(Math.round(el.scrollTop / ITEM_H));
     if (idx !== centre) setCentre(idx);
-    // Commit the value once scrolling settles.
+    if (drag.current) return; // mid-drag: snap on release instead
     clearTimeout(settle.current);
-    settle.current = setTimeout(() => {
-      const v = values[idx];
-      if (v !== value) onChange(v);
-    }, 90);
+    settle.current = setTimeout(() => snapTo(idx), 110);
   };
 
-  const jump = (delta) => {
-    const idx = Math.max(0, Math.min(values.length - 1, centre + delta));
+  // --- desktop click-and-drag (mouse only; touch keeps native scrolling) ---
+  const onPointerDown = (e) => {
+    if (e.pointerType !== "mouse") return;
     const el = ref.current;
-    if (el) el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
+    if (!el) return;
+    drag.current = { startY: e.clientY, startTop: el.scrollTop, id: e.pointerId };
+    moved.current = false;
+    el.setPointerCapture?.(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    const d = drag.current, el = ref.current;
+    if (!d || !el) return;
+    const dy = e.clientY - d.startY;
+    if (Math.abs(dy) > 3) moved.current = true;
+    el.scrollTop = d.startTop - dy;
+  };
+  const endDrag = () => {
+    const d = drag.current, el = ref.current;
+    if (!d || !el) return;
+    el.releasePointerCapture?.(d.id);
+    drag.current = null;
+    snapTo(nearestIdx());
+  };
+
+  const onItemClick = (i) => {
+    if (moved.current) { moved.current = false; return; } // was a drag, not a click
+    snapTo(clampIdx(i));
   };
 
   return (
@@ -153,8 +298,11 @@ function WheelPicker({ values, value, onChange, renderLabel = (v) => v }) {
       <div
         ref={ref}
         onScroll={onScroll}
-        className="no-scrollbar h-full overflow-y-scroll"
-        style={{ scrollSnapType: "y mandatory" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        className="no-scrollbar h-full cursor-grab overflow-y-scroll active:cursor-grabbing"
       >
         <div style={{ height: ITEM_H * PAD_ITEMS }} />
         {values.map((v, i) => {
@@ -167,9 +315,9 @@ function WheelPicker({ values, value, onChange, renderLabel = (v) => v }) {
           return (
             <div
               key={v}
-              onClick={() => jump(i - centre)}
-              className={`flex cursor-pointer items-center justify-center tabular-nums transition-all duration-100 ${cls}`}
-              style={{ height: ITEM_H, scrollSnapAlign: "center" }}
+              onClick={() => onItemClick(i)}
+              className={`flex items-center justify-center tabular-nums transition-all duration-100 ${cls}`}
+              style={{ height: ITEM_H }}
             >
               {renderLabel(v)}
             </div>

@@ -1,6 +1,6 @@
 import { Button, Card, MoneyInput, Chevron } from "../components/ui.jsx";
 import {
-  usePlanner, CATEGORIES, EXPENSE_PLACEHOLDERS,
+  usePlanner, EXPENSE_PLACEHOLDERS, visibleCategories,
   monthlyIncomeOf, debtsOf, livingOf,
 } from "../state.jsx";
 import { fmt } from "../lib/engine.js";
@@ -14,8 +14,8 @@ export default function Inputs({ onBack, onResults, onEdit }) {
   const setExpense = (key, v) =>
     update((s) => ({ ...s, expenses: { ...s.expenses, [key]: v } }));
 
-  // Rent is hidden when a mortgage is active.
-  const cats = CATEGORIES.filter((c) => !(state.mortgage.on && c.key === "rent"));
+  // Mortgage hides rent; no car hides petrol/insurance; no pets hides pet costs.
+  const cats = visibleCategories(state);
 
   const chips = [
     ["Paid", state.payFrequency],

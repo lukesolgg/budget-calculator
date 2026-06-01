@@ -64,6 +64,23 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Onboarding + accounts overhaul (build-verified; needs device pass):
+  - Auth centralised in `src/lib/auth.jsx` (AuthProvider/useAuth): holds the
+    session + debounced cloud AUTO-SAVE (no more "Save progress" button). Wraps
+    Shell inside PlannerProvider. Account.jsx is now just the bar (username +
+    save status + Log out) plus a LOGIN-ONLY modal (signup moved into onboarding).
+  - Sign in now goes straight to the dashboard (App passes onSignedIn).
+  - New users MUST create a username+PIN as the FIRST onboarding step (required;
+    App passes `firstRun`, Wizard captures it once so step indices stay stable
+    after signup). Returning/edit flows skip it.
+  - Age wheel: added desktop click-and-drag (mouse pointer drag); mobile still
+    uses native touch scroll; JS snapping (dropped CSS scroll-snap).
+  - New steps: "Do you own a car?" (carown → car.owns) gating the existing car-
+    loan step, and "Do you have pets?" (pets.on). Budget now hides Petrol/Diesel
+    + Car Insurance when no car, and Pet Food + Pet Insurance when no pets, via
+    `visibleCategories(s)` (used by Inputs, livingOf, expenseItemsOf).
+  - profile.js schema → 5 (budget.pets). hydrate() infers car.owns / pets.on for
+    legacy saves so existing budgets don't lose categories.
 - TODO batch done (build-verified; needs a device visual pass): Onboarding —
   age step now a custom `WheelPicker` (Wizard.jsx: native momentum scroll/snap,
   no scrollbar, centre band + fades; defaults empty age to 30); wizard wider on

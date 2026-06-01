@@ -40,7 +40,8 @@ export const initialState = {
   hasDebt: true,
   debts: [blankDebt()],
   mortgage: { on: false, payment: "", balance: "", rate: "" },
-  car: { on: false, balance: "", payment: "", rate: "" },
+  car: { owns: false, on: false, balance: "", payment: "", rate: "" },
+  pets: { on: false },
   savings: { total: "", use: "" },
   expenses: {}, // key -> string value
   // Debt-plan choices (remembered):
@@ -55,14 +56,26 @@ const DRAFT_KEY = "dfp_draft_react";
 // never leaves required fields missing. Nested objects merge one level deep.
 export function hydrate(flat) {
   if (!flat) return initialState;
+  const expenses = flat.expenses || {};
+  const car = { ...initialState.car, ...(flat.car || {}) };
+  const pets = { ...initialState.pets, ...(flat.pets || {}) };
+  // Legacy saves predate the car-ownership / pets flags: infer them so existing
+  // budgets don't suddenly hide categories the user already filled in.
+  if (!flat.car || flat.car.owns === undefined) {
+    car.owns = !!(car.on || parseFloat(expenses.carInsurance) > 0 || parseFloat(expenses.gas) > 0);
+  }
+  if (!flat.pets || flat.pets.on === undefined) {
+    pets.on = !!(parseFloat(expenses.petInsurance) > 0 || parseFloat(expenses.petFood) > 0);
+  }
   return {
     ...initialState,
     ...flat,
     mortgage: { ...initialState.mortgage, ...(flat.mortgage || {}) },
-    car: { ...initialState.car, ...(flat.car || {}) },
+    car,
+    pets,
     savings: { ...initialState.savings, ...(flat.savings || {}) },
     debts: flat.debts && flat.debts.length ? flat.debts : initialState.debts,
-    expenses: flat.expenses || {},
+    expenses,
   };
 }
 
@@ -123,10 +136,20 @@ export function debtsOf(s) {
   return list.filter((d) => d.balance > 0);
 }
 
+// Categories shown in the budget for this user. Mortgage replaces rent; car
+// costs only if they own a car; pet costs only if they have pets.
+export function visibleCategories(s) {
+  return CATEGORIES.filter((c) => {
+    if (s.mortgage.on && c.key === "rent") return false;
+    if (!s.car?.owns && (c.key === "carInsurance" || c.key === "gas")) return false;
+    if (!s.pets?.on && (c.key === "petInsurance" || c.key === "petFood")) return false;
+    return true;
+  });
+}
+
 export function livingOf(s) {
   let living = 0;
-  CATEGORIES.forEach((c) => {
-    if (s.mortgage.on && c.key === "rent") return; // mortgage replaces rent
+  visibleCategories(s).forEach((c) => {
     living += Math.max(0, parseFloat(s.expenses[c.key]) || 0);
   });
   if (s.mortgage.on) living += Math.max(0, parseFloat(s.mortgage.payment) || 0);
@@ -141,7 +164,7 @@ export const savingsToDeployOf = (s) => {
 
 // Expense items (incl. mortgage) for the chart.
 export function expenseItemsOf(s) {
-  const items = CATEGORIES.filter((c) => !(s.mortgage.on && c.key === "rent"))
+  const items = visibleCategories(s)
     .map((c) => ({ key: c.key, name: c.name, color: c.color, value: Math.max(0, parseFloat(s.expenses[c.key]) || 0) }))
     .filter((c) => c.value > 0);
   if (s.mortgage.on) {

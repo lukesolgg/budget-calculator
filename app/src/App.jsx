@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PlannerProvider } from "./state.jsx";
+import { AuthProvider } from "./lib/auth.jsx";
 import Welcome from "./screens/Welcome.jsx";
 import Wizard from "./screens/Wizard.jsx";
 import Inputs from "./screens/Inputs.jsx";
@@ -14,6 +15,7 @@ function Shell() {
   const [screen, setScreen] = useState("welcome");
   const [planKey, setPlanKey] = useState("balanced");
   const [signInSignal, setSignInSignal] = useState(0);
+  const [wizardFirst, setWizardFirst] = useState(false);
   const go = (s) => { setScreen(s); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const hasDraft = (() => {
     try {
@@ -26,16 +28,21 @@ function Shell() {
 
   return (
     <div className="mx-auto max-w-[1240px] px-6 pb-16 pt-8">
-      <Account openSignal={signInSignal} showBar={screen !== "welcome"} onLogout={() => go("welcome")} />
+      <Account
+        openSignal={signInSignal}
+        showBar={screen !== "welcome"}
+        onLogout={() => go("welcome")}
+        onSignedIn={() => go("dashboard")}
+      />
       {screen === "welcome" && (
         <Welcome
-          onNew={() => (hasDraft ? go("dashboard") : go("wizard"))}
+          onNew={() => (hasDraft ? go("dashboard") : (setWizardFirst(true), go("wizard")))}
           onReturn={() => setSignInSignal((n) => n + 1)}
           hasDraft={hasDraft}
         />
       )}
       {screen === "wizard" && (
-        <Wizard onDone={() => go("inputs")} onExitTop={() => go("welcome")} />
+        <Wizard firstRun={wizardFirst} onDone={() => { setWizardFirst(false); go("inputs"); }} onExitTop={() => go("welcome")} />
       )}
       {screen === "inputs" && (
         <Inputs onBack={() => go("wizard")} onResults={() => go("dashboard")} onEdit={() => go("wizard")} />
@@ -62,7 +69,9 @@ function Shell() {
 export default function App() {
   return (
     <PlannerProvider>
-      <Shell />
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
     </PlannerProvider>
   );
 }
