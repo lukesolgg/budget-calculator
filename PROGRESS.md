@@ -64,6 +64,20 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Overview + onboarding plan step:
+  - Onboarding now routes budget → (first-time debtors) payoff-plan selection →
+    dashboard. App.jsx `finishInputs` goes to a new "plan" screen = Results with
+    an `onboarding` prop (header "Last step: choose your payoff plan", back to
+    budget, hides debt manager, picking → dashboard). Skipped if no debt or a
+    plan's already chosen.
+  - Overview donut now shows expenses + minimum debt payments, sorted biggest→
+    smallest; the budget list uses the same sorted breakdown. Donut sits on top,
+    then a plan banner (coloured by chosen plan: "🔥 Accelerated Payoff · debt-
+    free in Xm", taps to the debt tab), then the title + budget list below.
+  - "This month" + 6-month snapshot now reflect the CHOSEN plan (and any locked
+    custom split from Detail): "Free" = fun money (e.g. £800), snapshot debt vs
+    savings split matches the plan. MonthlyFigures shows Spent/Free/Budget +
+    "+£X into savings".
 - REMOVED the "cash on hand / lump sum to clear debt now" feature entirely:
   dropped state.savings, savingsToDeployOf, the budget.savings namespace
   (profile serialize/deserialize/migrateV1), and stopped passing `lump` to

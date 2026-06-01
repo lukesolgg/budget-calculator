@@ -8,7 +8,7 @@ import { fmt, monthsToStr, buildPlans } from "../lib/engine.js";
 
 const COLOR_BY = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 
-export default function Results({ onBack, onPickPlan, embedded }) {
+export default function Results({ onBack, onPickPlan, embedded, onboarding }) {
   const { state, update } = usePlanner();
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
@@ -28,12 +28,20 @@ export default function Results({ onBack, onPickPlan, embedded }) {
       {!embedded && (
         <div className="mb-[18px] flex items-center gap-3">
           <button onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-[#1e2b27] bg-[#101a18] px-[18px] py-2.5 text-sm font-semibold text-ink transition hover:brightness-125">
-            <Chevron dir="left" /> Back to dashboard
+            <Chevron dir="left" /> {onboarding ? "Back to budget" : "Back to dashboard"}
           </button>
         </div>
       )}
 
-      <DebtManager />
+      {onboarding && (
+        <div className="mb-6 rounded-2xl border border-[#1e3a30] bg-[#0c1a15] px-5 py-4 text-center">
+          <div className="text-[11px] font-bold uppercase tracking-[.1em] text-accent">Last step</div>
+          <h1 className="mt-1 text-[22px] font-extrabold tracking-tight">Choose your payoff plan</h1>
+          <p className="mt-1 text-sm text-muted">Pick the pace that suits you — you can change it any time from your dashboard.</p>
+        </div>
+      )}
+
+      {!onboarding && <DebtManager />}
 
       {/* Top: donut (left) + stats (right) */}
       <div className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-2">

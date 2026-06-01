@@ -90,24 +90,52 @@ function TabBtn({ label, emoji, active, soon, onClick }) {
 }
 
 /* ----------------------------------------------------------- OVERVIEW -- */
+const PLAN_EMOJI = { balanced: "🌱", accelerated: "🔥", avalanche: "⚡" };
+
 function Overview({ onOpenTab, onEdit }) {
   const { state } = usePlanner();
   const income = monthlyIncomeOf(state);
   const debts = debtsOf(state);
   const living = livingOf(state);
   const expItems = expenseItemsOf(state);
-  const totalExpenses = expItems.reduce((s, c) => s + c.value, 0);
   const minTotal = debts.reduce((s, d) => s + d.min, 0);
   const totalDebt = debts.reduce((s, d) => s + d.balance, 0);
-  const spentOut = living + minTotal;          // money leaving each month
-  const leftover = income - spentOut;          // can be negative (over budget)
-  const spare = Math.max(0, leftover);
+  const spare = Math.max(0, income - living - minTotal);
+  const hasDebt = debts.length > 0;
 
   const { plans } = useMemo(() => buildPlans(debts, income, living), [debts, income, living]);
-  // Snapshot uses the Accelerated plan (plan 2): a chunk to debt now, the rest
-  // building savings — shifting fully to savings once debt-free.
-  const accel = plans.find((p) => p.def.key === "accelerated") || plans[0];
   const balanced = plans.find((p) => p.def.key === "balanced") || plans[0];
+  // The plan they chose during onboarding (defaults to balanced).
+  const chosen = plans.find((p) => p.def.key === state.selectedPlan) || balanced;
+
+  // Monthly money split for the chosen plan (mirrors the Detail sliders, incl.
+  // a locked custom split). Drives the right-hand "free to spend" + snapshot.
+  const available = Math.max(0, income - living);
+  const baseToDebt = Math.min(minTotal, available);
+  const pool = Math.max(0, available - baseToDebt);
+  const funCap = income * 0.3;
+  let aExtra = 0, aFun = 0, aSav = 0;
+  if (hasDebt) {
+    if (state.allocLocked && state.alloc) {
+      aExtra = state.alloc.extra || 0; aFun = state.alloc.fun || 0; aSav = state.alloc.savings || 0;
+    } else {
+      aExtra = Math.min(pool, pool * (chosen?.def.share ?? 0.25));
+      const rest = Math.max(0, pool - aExtra);
+      aFun = Math.min(rest / 2, funCap);
+      aSav = Math.max(0, rest - aFun);
+    }
+  }
+  const debtMonthly = hasDebt ? baseToDebt + aExtra : 0;   // total to debt / month
+  const funLeft = hasDebt ? aFun : spare;                  // free to spend
+  const overBudget = living + minTotal > income + 0.5;
+
+  // Donut + budget list: expenses + debt minimums, biggest → smallest.
+  const breakdown = useMemo(() => {
+    const items = [...expItems];
+    if (minTotal > 0) items.push({ key: "debtmin", name: "Debt payments", color: "#ff4d6d", value: minTotal });
+    return items.sort((a, b) => b.value - a.value);
+  }, [expItems, minTotal]);
+  const breakdownSum = breakdown.reduce((s, c) => s + c.value, 0);
 
   const age = parseInt(state.age, 10);
   const retire = useMemo(() => projectRetirement({
@@ -121,17 +149,36 @@ function Overview({ onOpenTab, onEdit }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-      {/* Left: donut + income/expenses/budget */}
+      {/* Left: donut, chosen-plan banner, then title + budget list */}
       <Card className="lg:p-7">
-        <h2 className="mb-1 text-[20px] font-bold">Income &amp; expenses</h2>
-        <p className="mb-5 text-sm text-muted">Where your {fmt(income)} a month goes.</p>
-        {expItems.length ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:items-center xl:gap-10">
+        {breakdown.length ? (
+          <>
             <div className="flex justify-center">
-              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="ov" centerTop={fmt(income)} maxW={420} />
+              <Donut items={breakdown} total={Math.max(income, breakdownSum)} idPrefix="ov" centerTop={fmt(income)} maxW={460} />
             </div>
-            <div className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
-              {expItems.map((c) => (
+
+            {hasDebt && chosen && (
+              <button
+                onClick={() => onOpenTab("debt")}
+                style={{ borderColor: chosen.def.color, boxShadow: `0 0 0 1px ${chosen.def.color}, 0 12px 30px -18px ${chosen.def.color}` }}
+                className="mt-6 flex w-full items-center gap-3 rounded-2xl border bg-[#0c121d] px-4 py-3 text-left transition hover:brightness-110"
+              >
+                <span className="text-2xl">{PLAN_EMOJI[chosen.def.key] || "🎯"}</span>
+                <span className="flex-1">
+                  <span className="block text-[15px] font-bold">{chosen.def.title}</span>
+                  <span className="block text-[12px] text-muted">Your chosen payoff plan · tap to view</span>
+                </span>
+                <span className="text-right">
+                  <span className="block text-[10px] uppercase tracking-[.06em] text-muted">Debt-free in</span>
+                  <span className="block text-[17px] font-extrabold tabular-nums" style={{ color: chosen.def.color }}>{monthsToStr(chosen.sim.months)}</span>
+                </span>
+              </button>
+            )}
+
+            <h2 className="mb-1 mt-6 text-[18px] font-bold">Income &amp; expenses</h2>
+            <p className="mb-4 text-sm text-muted">Where your {fmt(income)} a month goes.</p>
+            <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+              {breakdown.map((c) => (
                 <span key={c.key} className="inline-flex items-center justify-between gap-2 border-b border-border/60 pb-1.5 text-[13px]">
                   <span className="inline-flex items-center gap-2 text-muted">
                     <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
@@ -141,7 +188,7 @@ function Overview({ onOpenTab, onEdit }) {
                 </span>
               ))}
             </div>
-          </div>
+          </>
         ) : (
           <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
             Add your budget to see the breakdown.
@@ -152,8 +199,8 @@ function Overview({ onOpenTab, onEdit }) {
 
       {/* Right column */}
       <div className="flex flex-col gap-4">
-        <MonthlyFigures income={income} spent={spentOut} leftover={leftover} />
-        <Snapshot6 income={income} living={living} debts={debts} extra={accel ? accel.extra : 0} monthlyToDebt={accel ? accel.monthly : 0} totalDebt={totalDebt} />
+        <MonthlyFigures income={income} spent={living + debtMonthly} left={funLeft} saved={aSav} over={overBudget} />
+        <Snapshot6 income={income} living={living} debts={debts} extra={aExtra} monthlyToDebt={debtMonthly} totalDebt={totalDebt} />
         <RetirementCard retire={retire} age={age} />
       </div>
 
@@ -171,9 +218,8 @@ function Overview({ onOpenTab, onEdit }) {
   );
 }
 
-function MonthlyFigures({ income, spent, leftover }) {
+function MonthlyFigures({ income, spent, left, saved, over }) {
   const pct = income > 0 ? Math.min(100, Math.round((spent / income) * 100)) : 0;
-  const over = leftover < 0;
   const C = ({ k, v, tone }) => (
     <div>
       <div className={`text-[15px] font-extrabold tabular-nums ${tone === "bad" ? "text-bad" : tone === "good" ? "text-good" : "text-ink"}`}>{v}</div>
@@ -184,16 +230,17 @@ function MonthlyFigures({ income, spent, leftover }) {
     <div className="rounded-2xl border border-border bg-gradient-to-b from-panel to-panel2 p-4">
       <div className="mb-2 flex items-baseline justify-between">
         <h3 className="text-[14px] font-bold">This month</h3>
-        <span className={`text-[12px] font-semibold ${over ? "text-bad" : "text-good"}`}>{over ? `${fmt(-leftover)} over` : `${fmt(leftover)} under budget`}</span>
+        <span className={`text-[12px] font-semibold ${over ? "text-bad" : "text-good"}`}>{over ? "over budget" : `${fmt(left)} free to spend`}</span>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         <C k="Spent" v={fmt(spent)} tone="bad" />
-        <C k="Left" v={fmt(Math.max(0, leftover))} tone="good" />
+        <C k="Free" v={fmt(Math.max(0, left))} tone="good" />
         <C k="Budget" v={fmt(income)} />
       </div>
       <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#0a0f17]">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: over ? "#f0556f" : "linear-gradient(90deg,#12b886,#2fe6a6)" }} />
       </div>
+      {saved > 0.5 && <div className="mt-1.5 text-[11px] text-muted">Plus <b className="text-good">{fmt(saved)}</b>/mo into savings.</div>}
     </div>
   );
 }
