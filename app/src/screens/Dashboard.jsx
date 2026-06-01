@@ -121,33 +121,26 @@ function Overview({ onOpenTab, onEdit }) {
   const recs = buildRecommendations({ debts, income, living, spare, mortgageOn: state.mortgage.on });
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-8">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
       {/* Left: donut + income/expenses/budget */}
-      <Card className="lg:p-8">
+      <Card className="lg:p-7">
         <h2 className="mb-1 text-[20px] font-bold">Income &amp; expenses</h2>
         <p className="mb-5 text-sm text-muted">Where your {fmt(income)} a month goes.</p>
         {expItems.length ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-center xl:gap-10">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:items-center xl:gap-10">
             <div className="flex justify-center">
-              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="ov" centerTop={fmt(income)} maxW={440} />
+              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="ov" centerTop={fmt(income)} maxW={420} />
             </div>
-            <div>
-              <div className="grid grid-cols-3 gap-2 border-b border-border pb-4 text-center">
-                <Fig k="Income" v={fmt(income)} />
-                <Fig k="Expenses" v={fmt(living)} tone="bad" />
-                <Fig k="Left" v={fmt(leftover)} tone={leftover >= 0 ? "good" : "bad"} />
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2">
-                {expItems.map((c) => (
-                  <span key={c.key} className="inline-flex items-center justify-between gap-2 text-[13px]">
-                    <span className="inline-flex items-center gap-2 text-muted">
-                      <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
-                      {c.name}
-                    </span>
-                    <b className="text-ink tabular-nums">{fmt(c.value)}</b>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
+              {expItems.map((c) => (
+                <span key={c.key} className="inline-flex items-center justify-between gap-2 border-b border-border/60 pb-1.5 text-[13px]">
+                  <span className="inline-flex items-center gap-2 text-muted">
+                    <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
+                    {c.name}
                   </span>
-                ))}
-              </div>
+                  <b className="text-ink tabular-nums">{fmt(c.value)}</b>
+                </span>
+              ))}
             </div>
           </div>
         ) : (
@@ -159,7 +152,7 @@ function Overview({ onOpenTab, onEdit }) {
       </Card>
 
       {/* Right column */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         <MonthlyFigures income={income} spent={spentOut} leftover={leftover} />
         <Snapshot6 income={income} living={living} debts={debts} extra={accel ? accel.extra : 0} lump={lump} monthlyToDebt={accel ? accel.monthly : 0} totalDebt={totalDebt} />
         <RetirementCard retire={retire} age={age} />
@@ -175,16 +168,6 @@ function Overview({ onOpenTab, onEdit }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Fig({ k, v, tone }) {
-  const c = tone === "good" ? "text-good" : tone === "bad" ? "text-bad" : tone === "accent" ? "text-accent" : "text-ink";
-  return (
-    <div>
-      <div className={`text-[18px] font-extrabold tabular-nums ${c}`}>{v}</div>
-      <div className="mt-0.5 text-[10px] uppercase tracking-[.06em] text-muted">{k}</div>
     </div>
   );
 }
@@ -303,14 +286,14 @@ function RetirementCard({ retire, age }) {
     );
   }
   return (
-    <Card>
+    <Card className="lg:p-5">
       <div className="flex items-baseline justify-between">
         <h3 className="font-bold">Retirement</h3>
         <span className="text-[12px] text-muted">at age 60</span>
       </div>
-      <div className="mt-2 text-[34px] font-extrabold leading-none text-accent">{fmt(retire.balanceAtRetirement)}</div>
-      <p className="mt-2 text-[13px] leading-relaxed text-muted">
-        Saving steadily from age {age || "—"}, you'd pay in <b className="text-ink">{fmt(retire.totalContributed)}</b> and earn <b className="text-good">{fmt(retire.totalInterest)}</b> in growth (4.5%/yr).
+      <div className="mt-1.5 text-[28px] font-extrabold leading-none text-accent">{fmt(retire.balanceAtRetirement)}</div>
+      <p className="mt-2 text-[12px] leading-relaxed text-muted">
+        From age {age || "—"} you'd pay in <b className="text-ink">{fmt(retire.totalContributed)}</b> and earn <b className="text-good">{fmt(retire.totalInterest)}</b> in growth (4.5%/yr).
       </p>
     </Card>
   );
