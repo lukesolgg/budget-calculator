@@ -64,6 +64,11 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Debt manager on the Debt & budget tab (Results.jsx): "Your debts" card at the
+  top lists each debt + total, with "💸 Log a payment" (pick a debt, enter the
+  amount → subtracts from its balance, clears at 0) and "＋ Add a debt" (name/
+  balance/min/rate). Updates state.debts / state.car directly (auto-saves), so
+  no need to re-do onboarding to record a payment. Plan/stats recompute live.
 - Dashboard layout polish: dashboard breaks out to a wide container (App.jsx
   max-w 1760 on the dashboard screen only), sidebar hugs the left, Overview grid
   widened (1.35fr/1fr) with a bigger donut (Donut now takes a `maxW` prop, 520

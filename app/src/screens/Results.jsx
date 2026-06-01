@@ -1,4 +1,5 @@
-import { Card, Chevron } from "../components/ui.jsx";
+import { useState } from "react";
+import { Button, Card, Chevron, MoneyInput } from "../components/ui.jsx";
 import Donut from "../components/Donut.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, savingsToDeployOf, expenseItemsOf,
@@ -32,6 +33,8 @@ export default function Results({ onBack, onPickPlan, embedded }) {
           </button>
         </div>
       )}
+
+      <DebtManager />
 
       {/* Top: donut (left) + stats (right) */}
       <div className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -101,6 +104,137 @@ function StatRow({ k, v, tone, last }) {
 
 function Note({ children }) {
   return <div className="mb-[18px] rounded-[10px] border border-[#5a3d12] bg-[#1c1407] px-3.5 py-3 text-[13px] leading-relaxed text-warn">{children}</div>;
+}
+
+// Log a payment / add a debt — updates balances without re-doing onboarding.
+function DebtManager() {
+  const { state, update } = usePlanner();
+  const [mode, setMode] = useState(null); // null | "pay" | "add"
+  const [flash, setFlash] = useState("");
+
+  const items = [];
+  state.debts.forEach((d, i) => {
+    if ((parseFloat(d.bal) || 0) > 0) items.push({ id: `d${i}`, kind: "debt", index: i, name: (d.name || "").trim() || `Debt ${i + 1}`, bal: parseFloat(d.bal) || 0, rate: parseFloat(d.rate) || 0 });
+  });
+  if (state.car.on && (parseFloat(state.car.balance) || 0) > 0) {
+    items.push({ id: "car", kind: "car", name: "Car Loan", bal: parseFloat(state.car.balance) || 0, rate: parseFloat(state.car.rate) || 0 });
+  }
+  const total = items.reduce((s, x) => s + x.bal, 0);
+
+  const flashMsg = (m) => { setFlash(m); setTimeout(() => setFlash(""), 3500); };
+
+  const pay = (item, amt) => {
+    const a = Math.max(0, amt);
+    if (item.kind === "car") {
+      update((s) => ({ ...s, car: { ...s.car, balance: String(Math.max(0, (parseFloat(s.car.balance) || 0) - a)) } }));
+    } else {
+      update((s) => ({ ...s, debts: s.debts.map((d, j) => (j === item.index ? { ...d, bal: String(Math.max(0, (parseFloat(d.bal) || 0) - a)) } : d)) }));
+    }
+    const cleared = a >= item.bal - 0.005;
+    flashMsg(cleared ? `🎉 ${item.name} cleared — nice one!` : `−${fmt(a)} off ${item.name}. New balance ${fmt(Math.max(0, item.bal - a))}.`);
+    setMode(null);
+  };
+
+  const add = (deb) => {
+    update((s) => ({ ...s, hasDebt: true, debts: [...s.debts, { name: deb.name.trim() || "New debt", bal: deb.bal, min: deb.min, rate: deb.rate, iffree: false, ifuntil: "" }] }));
+    flashMsg(`Added ${deb.name.trim() || "new debt"} (${fmt(parseFloat(deb.bal) || 0)}).`);
+    setMode(null);
+  };
+
+  return (
+    <Card className="mb-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-bold">Your debts</h3>
+          <p className="text-[13px] text-muted">Total owed <b className="text-ink">{fmt(total)}</b> · update it whenever you make a payment.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setMode(mode === "pay" ? null : "pay")} disabled={!items.length} className="px-3.5 py-2 text-[13px]">💸 Log a payment</Button>
+          <Button variant="ghost" onClick={() => setMode(mode === "add" ? null : "add")} className="px-3.5 py-2 text-[13px]">＋ Add a debt</Button>
+        </div>
+      </div>
+
+      {flash && <div className="mt-3 rounded-lg border border-[#1f5c3a] bg-[#11301f] px-3.5 py-2 text-[13px] text-good">{flash}</div>}
+
+      {items.length > 0 ? (
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {items.map((it) => (
+            <div key={it.id} className="flex items-center justify-between rounded-xl border border-border bg-[#0c121d] px-3.5 py-2.5">
+              <span className="text-sm"><b>{it.name}</b> <span className="ml-1 text-[12px] text-muted">{it.rate}% APR</span></span>
+              <span className="font-bold tabular-nums">{fmt(it.bal)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-[13px] text-muted">No debts on record. Add one to build a payoff plan.</p>
+      )}
+
+      {mode === "pay" && <PayForm items={items} onCancel={() => setMode(null)} onPay={pay} />}
+      {mode === "add" && <AddForm onCancel={() => setMode(null)} onAdd={add} />}
+    </Card>
+  );
+}
+
+function MiniField({ label, children }) {
+  return <div><label className="mb-1.5 block text-[11px] uppercase tracking-[.06em] text-muted">{label}</label>{children}</div>;
+}
+
+function PayForm({ items, onCancel, onPay }) {
+  const [sel, setSel] = useState(items[0]?.id || "");
+  const [amt, setAmt] = useState("");
+  const item = items.find((i) => i.id === sel) || items[0];
+  const value = parseFloat(amt) || 0;
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-[#0c121d] p-4">
+      <h4 className="mb-3 font-semibold">Log a payment</h4>
+      <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr_auto] sm:items-end">
+        <MiniField label="Which debt">
+          <select value={sel} onChange={(e) => setSel(e.target.value)}
+            className="w-full rounded-[10px] border border-border bg-[#0b0f17] px-3 py-[11px] text-[15px] text-ink outline-none focus:border-accent">
+            {items.map((i) => <option key={i.id} value={i.id}>{i.name} — {fmt(i.bal)}</option>)}
+          </select>
+        </MiniField>
+        <MiniField label="Amount you paid"><MoneyInput value={amt} onChange={setAmt} placeholder="500" /></MiniField>
+        <div className="flex gap-2">
+          <Button onClick={() => item && value > 0 && onPay(item, Math.min(value, item.bal))} disabled={!item || value <= 0} className="px-4 py-3 text-sm">Confirm</Button>
+          <Button variant="ghost" onClick={onCancel} className="px-3.5 py-3 text-sm">Cancel</Button>
+        </div>
+      </div>
+      {item && value > 0 && (
+        <p className="mt-2.5 text-[12px] text-muted">{item.name} drops to <b className="text-good">{fmt(Math.max(0, item.bal - value))}</b>{value >= item.bal ? " — cleared! 🎉" : "."}</p>
+      )}
+    </div>
+  );
+}
+
+function AddForm({ onCancel, onAdd }) {
+  const [d, setD] = useState({ name: "", bal: "", min: "", rate: "" });
+  const set = (k, v) => setD((s) => ({ ...s, [k]: v }));
+  const ok = (parseFloat(d.bal) || 0) > 0;
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-[#0c121d] p-4">
+      <h4 className="mb-3 font-semibold">Add a debt</h4>
+      <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr_1fr_.8fr]">
+        <MiniField label="Name">
+          <input value={d.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Santander"
+            className="w-full rounded-[10px] border border-border bg-[#0b0f17] px-3 py-[11px] text-[15px] text-ink outline-none focus:border-accent" />
+        </MiniField>
+        <MiniField label="Balance"><MoneyInput value={d.bal} onChange={(v) => set("bal", v)} placeholder="2500" /></MiniField>
+        <MiniField label="Min / month"><MoneyInput value={d.min} onChange={(v) => set("min", v)} placeholder="75" /></MiniField>
+        <MiniField label="Rate">
+          <span className="relative block">
+            <input type="number" inputMode="decimal" min="0" step="0.1" value={d.rate} onChange={(e) => set("rate", e.target.value)} placeholder="22.9"
+              className="w-full rounded-[10px] border border-border bg-[#0b0f17] py-[11px] pl-3 pr-7 text-[15px] text-ink outline-none focus:border-accent" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">%</span>
+          </span>
+        </MiniField>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Button onClick={() => ok && onAdd(d)} disabled={!ok} className="px-4 py-2.5 text-sm">Add debt</Button>
+        <Button variant="ghost" onClick={onCancel} className="px-3.5 py-2.5 text-sm">Cancel</Button>
+      </div>
+    </div>
+  );
 }
 
 function PlanCard({ x, selected, onPick }) {
