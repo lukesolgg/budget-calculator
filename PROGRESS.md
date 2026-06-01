@@ -64,6 +64,14 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Landing page makeover (Welcome.jsx, pre-login; build-verified, NOT visually
+  checked — no headless browser in CI env): full marketing page inspired by
+  Budgetwise but in Orcl. dark/green theme. Top nav (logo + Log in + Get
+  started), 2-col HERO with angled CSS phone mockups (PlanScreen + Dashboard
+  screen, in-flow w/ overlap), TOOLS section (pill tabs + arrows + dot nav, one
+  phone preview that switches per tool via ToolGraphic: donut/bars/line/steps/
+  checks/lock), FAQ accordion (2-col, single-open), closing CTA band, footer.
+  CTAs unchanged: onNew (get started / continue) + onReturn (log in modal).
 - Goals + personalised dashboard (build-verified; needs device pass):
   - New onboarding "goals" step (after account, first-run only): pick a PRIMARY
     focus + tick extra interests. State: `goals { primary, interests }` (schema 6).
