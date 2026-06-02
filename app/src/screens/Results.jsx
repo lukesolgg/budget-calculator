@@ -4,7 +4,15 @@ import Donut from "../components/Donut.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
 } from "../state.jsx";
-import { fmt, monthsToStr, buildPlans } from "../lib/engine.js";
+import { fmt, monthsToStr, buildPlans, monthsUntil } from "../lib/engine.js";
+
+// Highlight colour for a debt: green = interest-free with time, orange =
+// interest-free running out, red = interest already accruing (no 0% period).
+function debtTone(freeMonths) {
+  if (freeMonths > 6) return { bd: "#1f5c3a", bg: "#0c1f16", tx: "#3ad07f", label: `0% · ${freeMonths} mo left` };
+  if (freeMonths > 0) return { bd: "#5a3d12", bg: "#1c1407", tx: "#f0b86a", label: `0% · ${freeMonths} mo left` };
+  return { bd: "#5a1f1f", bg: "#1a0f0f", tx: "#f87171", label: "Accruing interest" };
+}
 
 const COLOR_BY = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 
@@ -121,11 +129,12 @@ function DebtManager() {
 
   const items = [];
   state.debts.forEach((d, i) => {
-    if ((parseFloat(d.bal) || 0) > 0) items.push({ id: `d${i}`, kind: "debt", index: i, name: (d.name || "").trim() || `Debt ${i + 1}`, bal: parseFloat(d.bal) || 0, rate: parseFloat(d.rate) || 0 });
+    if ((parseFloat(d.bal) || 0) > 0) items.push({ id: `d${i}`, kind: "debt", index: i, name: (d.name || "").trim() || `Debt ${i + 1}`, bal: parseFloat(d.bal) || 0, rate: parseFloat(d.rate) || 0, freeMonths: d.iffree ? monthsUntil(d.ifuntil) : 0 });
   });
   if (state.car.on && (parseFloat(state.car.balance) || 0) > 0) {
-    items.push({ id: "car", kind: "car", name: "Car Loan", bal: parseFloat(state.car.balance) || 0, rate: parseFloat(state.car.rate) || 0 });
+    items.push({ id: "car", kind: "car", name: "Car Loan", bal: parseFloat(state.car.balance) || 0, rate: parseFloat(state.car.rate) || 0, freeMonths: 0 });
   }
+  items.sort((a, b) => b.bal - a.bal); // biggest first
   const total = items.reduce((s, x) => s + x.bal, 0);
 
   const flashMsg = (m) => { setFlash(m); setTimeout(() => setFlash(""), 3500); };
@@ -165,12 +174,18 @@ function DebtManager() {
 
       {items.length > 0 ? (
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {items.map((it) => (
-            <div key={it.id} className="flex items-center justify-between rounded-xl border border-border bg-[#0c121d] px-3.5 py-2.5">
-              <span className="text-sm"><b>{it.name}</b> <span className="ml-1 text-[12px] text-muted">{it.rate}% APR</span></span>
-              <span className="font-bold tabular-nums">{fmt(it.bal)}</span>
-            </div>
-          ))}
+          {items.map((it) => {
+            const tone = debtTone(it.freeMonths);
+            return (
+              <div key={it.id} className="flex items-center justify-between gap-3 rounded-xl border bg-[#0c121d] px-3.5 py-2.5" style={{ borderColor: tone.bd, borderLeftWidth: 4 }}>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold">{it.name}</span>
+                  <span className="text-[11px] font-semibold" style={{ color: tone.tx }}>{tone.label}{it.freeMonths === 0 && it.rate > 0 ? ` · ${it.rate}%` : ""}</span>
+                </span>
+                <span className="font-bold tabular-nums">{fmt(it.bal)}</span>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className="mt-3 text-[13px] text-muted">No debts on record. Add one to build a payoff plan.</p>

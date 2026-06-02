@@ -153,41 +153,43 @@ function Overview({ onOpenTab, onEdit }) {
       <Card className="lg:p-7">
         {breakdown.length ? (
           <>
-            <div className="flex justify-center">
-              <Donut items={breakdown} total={Math.max(income, breakdownSum)} idPrefix="ov" centerTop={fmt(income)} maxW={460} />
+            <div className="grid gap-5 sm:grid-cols-[minmax(0,270px)_1fr] sm:items-center">
+              <div className="flex justify-center">
+                <Donut items={breakdown} total={Math.max(income, breakdownSum)} idPrefix="ov" centerTop={fmt(income)} maxW={270} />
+              </div>
+              <div>
+                <h2 className="mb-2 text-[16px] font-bold">Income &amp; expenses</h2>
+                <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+                  {breakdown.map((c) => (
+                    <span key={c.key} className="inline-flex items-center justify-between gap-2 border-b border-border/50 pb-1 text-[12.5px]">
+                      <span className="inline-flex items-center gap-2 text-muted">
+                        <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
+                        {c.name}
+                      </span>
+                      <b className="text-ink tabular-nums">{fmt(c.value)}</b>
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {hasDebt && chosen && (
               <button
                 onClick={() => onOpenTab("debt")}
                 style={{ borderColor: chosen.def.color, boxShadow: `0 0 0 1px ${chosen.def.color}, 0 12px 30px -18px ${chosen.def.color}` }}
-                className="mt-6 flex w-full items-center gap-3 rounded-2xl border bg-[#0c121d] px-4 py-3 text-left transition hover:brightness-110"
+                className="mt-5 flex w-full items-center gap-3 rounded-2xl border bg-[#0c121d] px-4 py-2.5 text-left transition hover:brightness-110"
               >
-                <span className="text-2xl">{PLAN_EMOJI[chosen.def.key] || "🎯"}</span>
+                <span className="text-xl">{PLAN_EMOJI[chosen.def.key] || "🎯"}</span>
                 <span className="flex-1">
-                  <span className="block text-[15px] font-bold">{chosen.def.title}</span>
-                  <span className="block text-[12px] text-muted">Your chosen payoff plan · tap to view</span>
+                  <span className="block text-[14px] font-bold">{chosen.def.title}</span>
+                  <span className="block text-[11px] text-muted">Your chosen payoff plan · tap to view</span>
                 </span>
                 <span className="text-right">
-                  <span className="block text-[10px] uppercase tracking-[.06em] text-muted">Debt-free in</span>
-                  <span className="block text-[17px] font-extrabold tabular-nums" style={{ color: chosen.def.color }}>{monthsToStr(chosen.sim.months)}</span>
+                  <span className="block text-[9px] uppercase tracking-[.06em] text-muted">Debt-free in</span>
+                  <span className="block text-[15px] font-extrabold tabular-nums" style={{ color: chosen.def.color }}>{monthsToStr(chosen.sim.months)}</span>
                 </span>
               </button>
             )}
-
-            <h2 className="mb-1 mt-6 text-[18px] font-bold">Income &amp; expenses</h2>
-            <p className="mb-4 text-sm text-muted">Where your {fmt(income)} a month goes.</p>
-            <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-              {breakdown.map((c) => (
-                <span key={c.key} className="inline-flex items-center justify-between gap-2 border-b border-border/60 pb-1.5 text-[13px]">
-                  <span className="inline-flex items-center gap-2 text-muted">
-                    <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
-                    {c.name}
-                  </span>
-                  <b className="text-ink tabular-nums">{fmt(c.value)}</b>
-                </span>
-              ))}
-            </div>
           </>
         ) : (
           <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
@@ -202,6 +204,18 @@ function Overview({ onOpenTab, onEdit }) {
         <MonthlyFigures income={income} spent={living + debtMonthly} left={funLeft} saved={aSav} over={overBudget} />
         <Snapshot6 income={income} living={living} debts={debts} extra={aExtra} monthlyToDebt={debtMonthly} totalDebt={totalDebt} />
         <RetirementCard retire={retire} age={age} />
+      </div>
+
+      {/* Quick actions */}
+      <div className="lg:col-span-2">
+        <h2 className="mb-1 text-[18px] font-bold">What do you want to do?</h2>
+        <p className="mb-3 text-sm text-muted">Jump straight to the tools that matter to you.</p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <ActionCard emoji="🔎" title="In-depth budget" desc="See and tweak every part of your budget." onOpen={onEdit} />
+          <ActionCard emoji="💳" title="Debt planning" desc="Your payoff plan, and log payments." onOpen={() => onOpenTab("debt")} />
+          <ActionCard emoji="🛟" title="Emergency fund" desc="Plan a 3–6 month safety net." soon />
+          <ActionCard emoji="🚀" title="Side hustles" desc="Boost your income with extra work." soon />
+        </div>
       </div>
 
       {/* Recommendations (full width) */}
@@ -342,6 +356,27 @@ function RetirementCard({ retire, age }) {
         From age {age || "—"} you'd pay in <b className="text-ink">{fmt(retire.totalContributed)}</b> and earn <b className="text-good">{fmt(retire.totalInterest)}</b> in growth (4.5%/yr).
       </p>
     </Card>
+  );
+}
+
+function ActionCard({ emoji, title, desc, onOpen, soon }) {
+  return (
+    <button
+      onClick={soon ? undefined : onOpen}
+      className={`flex flex-col items-start rounded-2xl border border-border bg-[#0a120f]/80 p-4 text-left transition ${soon ? "cursor-default opacity-90" : "hover:-translate-y-0.5 hover:border-[#244a3c] hover:shadow-[0_12px_34px_-16px_rgba(47,230,166,.6)]"}`}
+    >
+      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f241c] text-xl">{emoji}</div>
+      <div className="flex items-center gap-2">
+        <h3 className="text-[15px] font-bold">{title}</h3>
+        {soon && <span className="rounded-full border border-[#2a3b34] bg-[#0c1a15] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[.06em] text-muted">Soon</span>}
+      </div>
+      <p className="mt-1 flex-1 text-[12.5px] leading-snug text-muted">{desc}</p>
+      {!soon && (
+        <span className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold text-accent">
+          Open <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </span>
+      )}
+    </button>
   );
 }
 

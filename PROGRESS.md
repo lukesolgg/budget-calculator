@@ -64,6 +64,13 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Dashboard density + direction: Overview donut + income/expenses list now sit
+  side-by-side (donut ~270px) so the block is short vertically; compact plan
+  banner below. Added a 4-card "What do you want to do?" quick-actions row under
+  the overview (In-depth budget→edit, Debt planning→debt tab, Emergency fund &
+  Side hustles = coming soon) via ActionCard. DebtManager list now sorts biggest→
+  smallest and colour-codes each debt (green = 0% with >6mo, orange = 0% running
+  out, red = accruing interest) with a left border + label.
 - Auth gate fix: "Continue where you left off" no longer opens the dashboard
   from a stale localStorage draft when not signed in. Shell now reads useAuth
   session: signed in → dashboard; has a draft but no session → opens the sign-in
