@@ -49,6 +49,8 @@ export const initialState = {
   allocLocked: false,
   // What the user wants from the app — drives dashboard ordering + advice.
   goals: { primary: "", interests: {} }, // primary = section key; interests = { [key]: true }
+  debtBaseline: 0,          // peak total debt seen — basis for "cleared so far"
+  lastPaymentMonth: "",     // "YYYY-MM" of last logged payment (reminder nudge)
 };
 
 const DRAFT_KEY = "dfp_draft_react";
@@ -75,6 +77,8 @@ export function hydrate(flat) {
     car,
     pets,
     goals: { primary: flat.goals?.primary || "", interests: flat.goals?.interests || {} },
+    debtBaseline: flat.debtBaseline || 0,
+    lastPaymentMonth: flat.lastPaymentMonth || "",
     debts: flat.debts && flat.debts.length ? flat.debts : initialState.debts,
     expenses,
   };
@@ -106,6 +110,15 @@ export function PlannerProvider({ children }) {
     }, 400);
     return () => clearTimeout(timer.current);
   }, [state]);
+
+  // Keep the debt baseline at the peak total owed, so "cleared so far" measures
+  // real progress (paying down lowers the current total, not the baseline).
+  useEffect(() => {
+    const total = debtsOf(state).reduce((s, d) => s + d.balance, 0);
+    if (total > (state.debtBaseline || 0) + 0.5) {
+      setState((s) => ({ ...s, debtBaseline: total }));
+    }
+  }, [state.debts, state.car, state.hasDebt]); // eslint-disable-line
 
   // Generic field updater (supports nested via updater fn).
   const update = (patch) =>

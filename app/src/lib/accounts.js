@@ -38,6 +38,18 @@ export const backend = {
     if (!a || a.pin !== lsHash(pin)) return { ok: false, error: "Wrong username or PIN." };
     return { ok: true, data: a.data };
   },
+  async changePin(username, oldPin, newPin) {
+    if (useSupabase) {
+      const { data: r, error } = await sb.rpc("change_pin", { p_username: username, p_old_pin: oldPin, p_new_pin: newPin });
+      if (error) return { ok: false, error: error.message };
+      if (r === "BAD") return { ok: false, error: "Current PIN is wrong." };
+      return { ok: true };
+    }
+    const accts = lsAccounts(); const a = accts[username];
+    if (!a || a.pin !== lsHash(oldPin)) return { ok: false, error: "Current PIN is wrong." };
+    a.pin = lsHash(newPin); lsSave(accts);
+    return { ok: true };
+  },
   async save(username, pin, data) {
     if (useSupabase) {
       const { data: r, error } = await sb.rpc("save_data", { p_username: username, p_pin: pin, p_data: data });

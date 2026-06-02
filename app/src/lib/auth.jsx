@@ -58,8 +58,22 @@ export function AuthProvider({ children }) {
 
   const logout = () => { persist(null); setSaveState("saved"); };
 
+  const changePin = async (oldPin, newPin) => {
+    if (!session) return { ok: false, error: "Not signed in." };
+    const res = await backend.changePin(session.username, oldPin, newPin);
+    if (res.ok) { skipNext.current = true; persist({ username: session.username, pin: newPin }); }
+    return res;
+  };
+
+  // Best-effort wipe: blank the cloud record (no account-delete RPC) + sign out.
+  const wipeData = async (blankStored) => {
+    if (session) { try { await backend.save(session.username, session.pin, blankStored); } catch {} }
+    persist(null);
+    setSaveState("saved");
+  };
+
   return (
-    <AuthCtx.Provider value={{ session, saveState, signup, login, logout }}>
+    <AuthCtx.Provider value={{ session, saveState, signup, login, logout, changePin, wipeData }}>
       {children}
     </AuthCtx.Provider>
   );

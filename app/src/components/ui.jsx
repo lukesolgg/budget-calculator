@@ -1,4 +1,26 @@
 // Small shared UI primitives, Tailwind-styled.
+import { useState } from "react";
+
+// A little "?" that reveals a plain-language explanation on tap/hover.
+export function InfoTip({ text, label = "What's this?" }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex align-middle"
+      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        className="ml-1 inline-flex h-[15px] w-[15px] items-center justify-center rounded-full border border-border text-[10px] font-bold leading-none text-muted transition hover:border-accent hover:text-accent"
+      >?</button>
+      {open && (
+        <span className="absolute bottom-full left-1/2 z-40 mb-1.5 w-52 -translate-x-1/2 rounded-lg border border-border bg-[#05080c] p-2.5 text-left text-[11px] font-normal leading-snug text-muted shadow-[0_10px_30px_-8px_rgba(0,0,0,.8)]">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
 
 export function Button({ variant = "primary", className = "", children, ...props }) {
   const base =

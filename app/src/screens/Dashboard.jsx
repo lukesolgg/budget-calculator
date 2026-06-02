@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Card } from "../components/ui.jsx";
+import { useEffect, useMemo, useState } from "react";
+import { Card, InfoTip } from "../components/ui.jsx";
 import Donut from "../components/Donut.jsx";
 import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
@@ -10,16 +10,20 @@ import Savings from "./Savings.jsx";
 import Career from "./Career.jsx";
 import Results from "./Results.jsx";
 import Detail from "./Detail.jsx";
+import Settings from "./Settings.jsx";
 
 const LIVE = new Set(["debt", "savings", "career"]);
 const TONE = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 
 // Sidebar shell: Overview is the home panel; sections are in-place tabs.
-export default function Dashboard({ onEdit }) {
+export default function Dashboard({ onEdit, onLogout }) {
   const { state } = usePlanner();
   const [tab, setTab] = useState("overview");
   const [detailPlan, setDetailPlan] = useState(null); // debt sub-view
   const go = (t) => { setTab(t); setDetailPlan(null); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const hasDebt = debtsOf(state).length > 0;
+  const [nudgeOpen, setNudgeOpen] = useState(() => { try { return !localStorage.getItem("dfp_nudge_dismissed"); } catch { return true; } });
+  const dismissNudge = () => { setNudgeOpen(false); try { localStorage.setItem("dfp_nudge_dismissed", "1"); } catch {} };
 
   // Tab order: Overview, then goal-personalised sections.
   const primary = state.goals?.primary || "";
@@ -36,6 +40,21 @@ export default function Dashboard({ onEdit }) {
         <h1 className="text-[22px] font-extrabold tracking-tight">Orcl. hub</h1>
       </header>
 
+      {tab === "overview" && nudgeOpen && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#1e3a30] bg-[#0c1a15] px-4 py-3 animate-fadeUp">
+          <span className="text-xl">👋</span>
+          <div className="flex-1 text-[13px] leading-snug">
+            <b className="text-ink">Welcome to your hub.</b>{" "}
+            <span className="text-muted">
+              {hasDebt
+                ? <>This is your home base. Start with <button onClick={() => go("debt")} className="font-semibold text-accent hover:underline">your debt plan</button>, then explore the tools below.</>
+                : <>This is your home base — explore the tools below to grow your money.</>}
+            </span>
+          </div>
+          <button onClick={dismissNudge} className="shrink-0 text-muted transition hover:text-ink" aria-label="Dismiss">✕</button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-6 md:flex-row lg:gap-9">
         {/* Sidebar */}
         <aside className="md:w-[200px] md:shrink-0">
@@ -51,9 +70,9 @@ export default function Dashboard({ onEdit }) {
                 />
               );
             })}
-            <button onClick={onEdit} className="mt-1 flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-[13px] font-semibold text-muted transition hover:bg-[#0c1a15] hover:text-ink md:mt-3 md:border-t md:border-border md:pt-3.5">
-              <span className="text-base">⚙️</span><span className="whitespace-nowrap">Edit my details</span>
-            </button>
+            <div className="mt-1 md:mt-3 md:border-t md:border-border md:pt-2">
+              <TabBtn label="Settings" emoji="⚙️" active={tab === "settings"} onClick={() => go("settings")} />
+            </div>
           </nav>
         </aside>
 
@@ -65,7 +84,8 @@ export default function Dashboard({ onEdit }) {
             : <Results embedded onPickPlan={(k) => { setDetailPlan(k); window.scrollTo({ top: 0, behavior: "smooth" }); }} />)}
           {tab === "savings" && <Savings embedded />}
           {tab === "career" && <Career embedded />}
-          {!["overview", "debt", "savings", "career"].includes(tab) && <ComingSoon section={sectionByKey(tab)} onBack={() => go("overview")} />}
+          {tab === "settings" && <Settings onEdit={onEdit} onLogout={onLogout} />}
+          {!["overview", "debt", "savings", "career", "settings"].includes(tab) && <ComingSoon section={sectionByKey(tab)} onBack={() => go("overview")} />}
         </main>
       </div>
     </div>
@@ -247,8 +267,8 @@ function MonthlyFigures({ income, spent, left, saved, over }) {
         <span className={`text-[12px] font-semibold ${over ? "text-bad" : "text-good"}`}>{over ? "over budget" : `${fmt(left)} free to spend`}</span>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
-        <C k="Spent" v={fmt(spent)} tone="bad" />
-        <C k="Free" v={fmt(Math.max(0, left))} tone="good" />
+        <C k={<>Spent<InfoTip text="Your essentials (rent, bills, food…) plus this month's debt payments." /></>} v={fmt(spent)} tone="bad" />
+        <C k={<>Free<InfoTip text="What's left for guilt-free spending after essentials, debt payments and savings." /></>} v={fmt(Math.max(0, left))} tone="good" />
         <C k="Budget" v={fmt(income)} />
       </div>
       <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#0a0f17]">
@@ -348,7 +368,7 @@ function RetirementCard({ retire, age }) {
   return (
     <Card className="lg:p-5">
       <div className="flex items-baseline justify-between">
-        <h3 className="font-bold">Retirement</h3>
+        <h3 className="font-bold">Retirement<InfoTip text="A rough projection of your savings pot at 60 if you keep putting money aside each month, growing ~4.5% a year. Not a guarantee." /></h3>
         <span className="text-[12px] text-muted">at age 60</span>
       </div>
       <div className="mt-1.5 text-[28px] font-extrabold leading-none text-accent">{fmt(retire.balanceAtRetirement)}</div>

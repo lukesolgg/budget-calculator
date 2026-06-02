@@ -62,7 +62,7 @@ function Shell() {
         <Results onboarding onBack={() => go("inputs")} onPickPlan={() => go("dashboard")} />
       )}
       {screen === "dashboard" && (
-        <Dashboard onEdit={() => go("inputs")} />
+        <Dashboard onEdit={() => go("inputs")} onLogout={() => go("welcome")} />
       )}
     </div>
   );
