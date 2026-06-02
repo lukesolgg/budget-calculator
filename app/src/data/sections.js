@@ -6,9 +6,9 @@
 
 export const SECTIONS = [
   {
-    key: "debt", emoji: "💳", title: "Debt & budget", live: true,
-    goalLabel: "Crush debt & budget",
-    desc: "A month-by-month plan to clear debt and own your money.",
+    key: "debt", emoji: "💳", title: "Debt", live: true,
+    goalLabel: "Crush my debt",
+    desc: "A month-by-month plan to clear your debts for good.",
   },
   {
     key: "savings", emoji: "💷", title: "Best UK savings", live: true,

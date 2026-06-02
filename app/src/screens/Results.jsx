@@ -51,7 +51,7 @@ export default function Results({ onBack, onPickPlan, embedded, onboarding }) {
 
       {embedded && !onboarding && (
         <header className="mb-5">
-          <h1 className="text-[22px] font-extrabold tracking-tight">Debt &amp; budget</h1>
+          <h1 className="text-[22px] font-extrabold tracking-tight">Debt</h1>
           <p className="mt-1 text-sm text-muted">Track your debts, log payments, and choose how fast to clear them.</p>
         </header>
       )}
