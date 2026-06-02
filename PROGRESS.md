@@ -64,6 +64,12 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Weekly/payday budget view: replaced the Overview "This month" card with an
+  AllocationCard ("Each payday"/"Each month") — a Per-{week/fortnight} ↔ Monthly
+  toggle (defaults to per-payday for weekly/fortnightly users) that rescales via
+  monthlyToFreq, showing the envelope split (Bills & essentials / Debt / Savings
+  / Free to spend) with a split bar + a "set £X aside for bills" tip. Removed the
+  Retirement card earlier freed the space.
 - Ease-of-use pass (orientation, trust, clarity, engagement):
   - Settings tab (Settings.jsx): account (username, Change PIN via new
     backend.changePin/auth.changePin + change_pin RPC in SUPABASE_SETUP.md, sign

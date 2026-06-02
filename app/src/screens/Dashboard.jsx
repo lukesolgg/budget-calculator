@@ -5,7 +5,7 @@ import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
 } from "../state.jsx";
 import { SECTIONS, sectionByKey } from "../data/sections.js";
-import { fmt, monthsToStr, buildPlans, simulateDetailed, projectSavings } from "../lib/engine.js";
+import { fmt, monthsToStr, buildPlans, simulateDetailed, projectSavings, monthlyToFreq, freqLabel } from "../lib/engine.js";
 import Savings from "./Savings.jsx";
 import Career from "./Career.jsx";
 import Results from "./Results.jsx";
@@ -213,7 +213,7 @@ function Overview({ onOpenTab, onEdit }) {
 
       {/* Right column */}
       <div className="flex flex-col gap-4">
-        <MonthlyFigures income={income} spent={living + debtMonthly} left={funLeft} saved={aSav} over={overBudget} />
+        <AllocationCard income={income} living={living} minTotal={minTotal} debtMonthly={debtMonthly} savings={aSav} fun={funLeft} freq={state.payFrequency || "monthly"} />
         <Snapshot6 income={income} living={living} debts={debts} extra={aExtra} monthlyToDebt={debtMonthly} totalDebt={totalDebt} />
       </div>
 
@@ -243,29 +243,69 @@ function Overview({ onOpenTab, onEdit }) {
   );
 }
 
-function MonthlyFigures({ income, spent, left, saved, over }) {
-  const pct = income > 0 ? Math.min(100, Math.round((spent / income) * 100)) : 0;
-  const C = ({ k, v, tone }) => (
-    <div>
-      <div className={`text-[15px] font-extrabold tabular-nums ${tone === "bad" ? "text-bad" : tone === "good" ? "text-good" : "text-ink"}`}>{v}</div>
-      <div className="text-[9px] uppercase tracking-[.06em] text-muted">{k}</div>
-    </div>
-  );
+// Payday plan: where each paycheck (or month) should go. Reframes the monthly
+// figures into the user's pay cycle so they know what to allocate on payday.
+function AllocationCard({ income, living, minTotal, debtMonthly, savings, fun, freq }) {
+  const weekly = freq !== "monthly";
+  const [perPay, setPerPay] = useState(weekly); // default to per-payday for weekly/fortnightly
+  const noun = freqLabel(freq) || "month";       // "week" | "fortnight" | "month"
+  const periodWord = perPay ? noun : "month";
+  const scale = (m) => (perPay ? monthlyToFreq(m, freq) : m);
+  const over = living + minTotal > income + 0.5;
+
+  const rows = [
+    { emoji: "🏠", label: "Bills & essentials", v: living, c: "#4cb8f0", tip: "Rent/mortgage, utilities, food and other regular costs." },
+    debtMonthly > 0.5 && { emoji: "💳", label: "Debt payment", v: debtMonthly, c: "#ff4d6d" },
+    savings > 0.5 && { emoji: "🐷", label: "Savings", v: savings, c: "#3ad07f" },
+    { emoji: "🎉", label: "Free to spend", v: fun, c: "#f5953a", hl: true, tip: "Yours to enjoy after essentials, debt and savings." },
+  ].filter(Boolean);
+
   return (
     <div className="rounded-2xl border border-border bg-gradient-to-b from-panel to-panel2 p-4">
-      <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-[14px] font-bold">This month</h3>
-        <span className={`text-[12px] font-semibold ${over ? "text-bad" : "text-good"}`}>{over ? "over budget" : `${fmt(left)} free to spend`}</span>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-[14px] font-bold">{perPay ? "Each payday" : "Each month"}</h3>
+        {weekly && (
+          <div className="flex gap-1 rounded-lg border border-border bg-[#0a0f17] p-0.5">
+            <button onClick={() => setPerPay(true)} className={`rounded-md px-2 py-0.5 text-[11px] font-semibold transition ${perPay ? "bg-[#1c2738] text-ink" : "text-muted hover:text-ink"}`}>Per {noun}</button>
+            <button onClick={() => setPerPay(false)} className={`rounded-md px-2 py-0.5 text-[11px] font-semibold transition ${!perPay ? "bg-[#1c2738] text-ink" : "text-muted hover:text-ink"}`}>Monthly</button>
+          </div>
+        )}
       </div>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <C k={<>Spent<InfoTip text="Your essentials (rent, bills, food…) plus this month's debt payments." /></>} v={fmt(spent)} tone="bad" />
-        <C k={<>Free<InfoTip text="What's left for guilt-free spending after essentials, debt payments and savings." /></>} v={fmt(Math.max(0, left))} tone="good" />
-        <C k="Budget" v={fmt(income)} />
+
+      <div className="mb-3 flex items-baseline gap-2">
+        <span className="text-[24px] font-extrabold tabular-nums">{fmt(scale(income))}</span>
+        <span className="text-[13px] text-muted">per {periodWord}</span>
       </div>
-      <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#0a0f17]">
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: over ? "#f0556f" : "linear-gradient(90deg,#12b886,#2fe6a6)" }} />
+
+      {over && (
+        <div className="mb-3 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3 py-2 text-[12px] text-warn">
+          Your essentials and minimum debt payments are more than your income — worth trimming somewhere.
+        </div>
+      )}
+
+      {/* split bar */}
+      <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-[#0a0f17]">
+        {rows.map((r) => income > 0 && r.v > 0 && (
+          <div key={r.label} style={{ width: `${(r.v / income) * 100}%`, background: r.c }} />
+        ))}
       </div>
-      {saved > 0.5 && <div className="mt-1.5 text-[11px] text-muted">Plus <b className="text-good">{fmt(saved)}</b>/mo into savings.</div>}
+
+      <div className="flex flex-col gap-1.5">
+        {rows.map((r) => (
+          <div key={r.label} className={`flex items-center justify-between rounded-lg px-2.5 py-2 ${r.hl ? "bg-[#0f241c]" : "bg-[#0a0f17]"}`}>
+            <span className="inline-flex items-center gap-2 text-[13px]">
+              <span>{r.emoji}</span>
+              <span className={r.hl ? "font-semibold text-ink" : "text-muted"}>{r.label}</span>
+              {r.tip && <InfoTip text={r.tip} />}
+            </span>
+            <b className={`tabular-nums ${r.hl ? "text-good" : "text-ink"}`}>{fmt(scale(r.v))}</b>
+          </div>
+        ))}
+      </div>
+
+      {perPay && weekly && living > 0 && (
+        <p className="mt-2.5 text-[11px] leading-snug text-muted">💡 Tip: move <b className="text-ink">{fmt(scale(living))}</b> into a separate bills pot each {noun} so it's ready when monthly bills land.</p>
+      )}
     </div>
   );
 }
