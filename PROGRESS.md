@@ -64,6 +64,19 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Ease-of-use pass (orientation, trust, clarity, engagement):
+  - Settings tab (Settings.jsx): account (username, Change PIN via new
+    backend.changePin/auth.changePin + change_pin RPC in SUPABASE_SETUP.md, sign
+    out), goals editor, edit details, export JSON / delete data (blanks cloud +
+    wipes local + signs out). Sidebar gained a Settings tab; old "Edit my
+    details" moved into it.
+  - First-visit welcome nudge on Overview (dismiss persists in localStorage).
+  - InfoTip tooltip primitive (ui.jsx) on Spent / Free / Retirement.
+  - Debt & budget tab: section intro; DebtManager "cleared so far" progress bar
+    (uses debtBaseline), monthly payment reminder (lastPaymentMonth), inline
+    EDIT per debt (incl. car + remove), bigger animated celebration on clear.
+  - Persist debtBaseline + lastPaymentMonth (schema 7); baseline auto-tracks the
+    peak total owed in PlannerProvider.
 - Dashboard density + direction: Overview donut + income/expenses list now sit
   side-by-side (donut ~270px) so the block is short vertically; compact plan
   banner below. Added a 4-card "What do you want to do?" quick-actions row under

@@ -68,11 +68,29 @@ begin
   return 'OK';
 end; $$;
 
+-- Change PIN: returns 'OK' or 'BAD' (wrong current PIN)
+create or replace function public.change_pin(p_username text, p_old_pin text, p_new_pin text)
+returns text language plpgsql security definer set search_path = public, extensions as $$
+declare rec accounts;
+begin
+  select * into rec from accounts where username = lower(p_username);
+  if not found or rec.pin_hash <> crypt(p_old_pin, rec.pin_hash) then
+    return 'BAD';
+  end if;
+  update accounts set pin_hash = crypt(p_new_pin, gen_salt('bf')), updated_at = now()
+   where username = lower(p_username);
+  return 'OK';
+end; $$;
+
 -- Allow the public (anon) key to CALL the functions (but not the table).
 grant execute on function public.signup_account(text, text, jsonb) to anon;
 grant execute on function public.login_account(text, text)         to anon;
 grant execute on function public.save_data(text, text, jsonb)      to anon;
+grant execute on function public.change_pin(text, text, text)      to anon;
 ```
+
+> If you already ran the setup before "Change PIN" existed, just run the
+> `change_pin` function + its `grant` above on their own to enable it.
 
 ## 3. Paste your keys into the app
 In the Supabase dashboard → **Project Settings → API**, copy:

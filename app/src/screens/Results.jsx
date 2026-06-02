@@ -49,6 +49,13 @@ export default function Results({ onBack, onPickPlan, embedded, onboarding }) {
         </div>
       )}
 
+      {embedded && !onboarding && (
+        <header className="mb-5">
+          <h1 className="text-[22px] font-extrabold tracking-tight">Debt &amp; budget</h1>
+          <p className="mt-1 text-sm text-muted">Track your debts, log payments, and choose how fast to clear them.</p>
+        </header>
+      )}
+
       {!onboarding && <DebtManager />}
 
       {/* Top: donut (left) + stats (right) */}
@@ -121,11 +128,14 @@ function Note({ children }) {
   return <div className="mb-[18px] rounded-[10px] border border-[#5a3d12] bg-[#1c1407] px-3.5 py-3 text-[13px] leading-relaxed text-warn">{children}</div>;
 }
 
-// Log a payment / add a debt — updates balances without re-doing onboarding.
+// Log a payment / add / edit a debt — updates balances without re-onboarding.
 function DebtManager() {
   const { state, update } = usePlanner();
-  const [mode, setMode] = useState(null); // null | "pay" | "add"
+  const [mode, setMode] = useState(null);     // null | "pay" | "add" | "edit"
+  const [editItem, setEditItem] = useState(null);
   const [flash, setFlash] = useState("");
+  const [celebrate, setCelebrate] = useState("");
+  const [hideReminder, setHideReminder] = useState(false);
 
   const items = [];
   state.debts.forEach((d, i) => {
@@ -137,32 +147,52 @@ function DebtManager() {
   items.sort((a, b) => b.bal - a.bal); // biggest first
   const total = items.reduce((s, x) => s + x.bal, 0);
 
+  const baseline = Math.max(state.debtBaseline || 0, total);
+  const cleared = Math.max(0, baseline - total);
+  const clearedPct = baseline > 0 ? Math.min(100, (cleared / baseline) * 100) : 0;
+
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const showReminder = !hideReminder && items.length > 0 && state.lastPaymentMonth !== thisMonth && mode !== "pay";
+
   const flashMsg = (m) => { setFlash(m); setTimeout(() => setFlash(""), 3500); };
 
   const pay = (item, amt) => {
     const a = Math.max(0, amt);
     if (item.kind === "car") {
-      update((s) => ({ ...s, car: { ...s.car, balance: String(Math.max(0, (parseFloat(s.car.balance) || 0) - a)) } }));
+      update((s) => ({ ...s, car: { ...s.car, balance: String(Math.max(0, (parseFloat(s.car.balance) || 0) - a)) }, lastPaymentMonth: thisMonth }));
     } else {
-      update((s) => ({ ...s, debts: s.debts.map((d, j) => (j === item.index ? { ...d, bal: String(Math.max(0, (parseFloat(d.bal) || 0) - a)) } : d)) }));
+      update((s) => ({ ...s, debts: s.debts.map((d, j) => (j === item.index ? { ...d, bal: String(Math.max(0, (parseFloat(d.bal) || 0) - a)) } : d)), lastPaymentMonth: thisMonth }));
     }
-    const cleared = a >= item.bal - 0.005;
-    flashMsg(cleared ? `🎉 ${item.name} cleared — nice one!` : `−${fmt(a)} off ${item.name}. New balance ${fmt(Math.max(0, item.bal - a))}.`);
+    if (a >= item.bal - 0.005) {
+      const last = total - item.bal <= 0.5;
+      setCelebrate(last ? "🎉 You're completely debt-free! Incredible work." : `🎉 ${item.name} is gone! One less debt.`);
+      setTimeout(() => setCelebrate(""), 6000);
+    } else {
+      flashMsg(`−${fmt(a)} off ${item.name}. New balance ${fmt(Math.max(0, item.bal - a))}.`);
+    }
     setMode(null);
   };
 
   const add = (deb) => {
-    update((s) => ({ ...s, hasDebt: true, debts: [...s.debts, { name: deb.name.trim() || "New debt", bal: deb.bal, min: deb.min, rate: deb.rate, iffree: false, ifuntil: "" }] }));
+    update((s) => ({ ...s, hasDebt: true, debts: [...s.debts, { name: deb.name.trim() || "New debt", bal: deb.bal, min: deb.min, rate: deb.rate, iffree: deb.iffree, ifuntil: deb.ifuntil }] }));
     flashMsg(`Added ${deb.name.trim() || "new debt"} (${fmt(parseFloat(deb.bal) || 0)}).`);
     setMode(null);
   };
 
+  const openEdit = (it) => { setEditItem(it); setMode("edit"); };
+
   return (
     <Card className="mb-7">
+      {celebrate && (
+        <div className="mb-4 animate-pop rounded-2xl border border-[#1f5c3a] bg-gradient-to-r from-[#11301f] to-[#0c1a15] px-5 py-4 text-center text-[17px] font-extrabold text-good shadow-[0_0_40px_-12px_#2fe6a6]">
+          {celebrate}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold">Your debts</h3>
-          <p className="text-[13px] text-muted">Total owed <b className="text-ink">{fmt(total)}</b> · update it whenever you make a payment.</p>
+          <p className="text-[13px] text-muted">Total owed <b className="text-ink">{fmt(total)}</b></p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setMode(mode === "pay" ? null : "pay")} disabled={!items.length} className="px-3.5 py-2 text-[13px]">💸 Log a payment</Button>
@@ -170,19 +200,45 @@ function DebtManager() {
         </div>
       </div>
 
+      {/* Progress: how much cleared since starting */}
+      {cleared > 0.5 && (
+        <div className="mt-3.5">
+          <div className="mb-1 flex items-baseline justify-between text-[12px]">
+            <span className="text-muted">Cleared so far</span>
+            <span className="font-bold text-good">{fmt(cleared)} <span className="font-normal text-muted">of {fmt(baseline)}</span></span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-[#0a0f17]">
+            <div className="h-full rounded-full bg-gradient-to-r from-[#12b886] to-[#2fe6a6]" style={{ width: `${clearedPct}%` }} />
+          </div>
+        </div>
+      )}
+
       {flash && <div className="mt-3 rounded-lg border border-[#1f5c3a] bg-[#11301f] px-3.5 py-2 text-[13px] text-good">{flash}</div>}
+
+      {showReminder && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3.5 py-2.5 text-[13px] text-warn">
+          <span>🔔 Made a payment this month? Log it to keep your plan accurate.</span>
+          <span className="flex gap-2">
+            <button onClick={() => setMode("pay")} className="font-semibold text-accent hover:underline">Log a payment</button>
+            <button onClick={() => setHideReminder(true)} className="text-muted hover:text-ink">Dismiss</button>
+          </span>
+        </div>
+      )}
 
       {items.length > 0 ? (
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {items.map((it) => {
             const tone = debtTone(it.freeMonths);
             return (
-              <div key={it.id} className="flex items-center justify-between gap-3 rounded-xl border bg-[#0c121d] px-3.5 py-2.5" style={{ borderColor: tone.bd, borderLeftWidth: 4 }}>
+              <div key={it.id} className="flex items-center justify-between gap-2 rounded-xl border bg-[#0c121d] px-3.5 py-2.5" style={{ borderColor: tone.bd, borderLeftWidth: 4 }}>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold">{it.name}</span>
                   <span className="text-[11px] font-semibold" style={{ color: tone.tx }}>{tone.label}{it.freeMonths === 0 && it.rate > 0 ? ` · ${it.rate}%` : ""}</span>
                 </span>
-                <span className="font-bold tabular-nums">{fmt(it.bal)}</span>
+                <span className="flex items-center gap-2.5">
+                  <span className="font-bold tabular-nums">{fmt(it.bal)}</span>
+                  <button onClick={() => openEdit(it)} className="text-muted transition hover:text-accent" title="Edit" aria-label={`Edit ${it.name}`}>✎</button>
+                </span>
               </div>
             );
           })}
@@ -193,7 +249,82 @@ function DebtManager() {
 
       {mode === "pay" && <PayForm items={items} onCancel={() => setMode(null)} onPay={pay} />}
       {mode === "add" && <AddForm onCancel={() => setMode(null)} onAdd={add} />}
+      {mode === "edit" && editItem && <EditForm item={editItem} onCancel={() => setMode(null)} onSaved={(m) => { flashMsg(m); setMode(null); }} />}
     </Card>
+  );
+}
+
+// Edit an existing debt's details (name / balance / min / rate / 0% period).
+function EditForm({ item, onCancel, onSaved }) {
+  const { state, update } = usePlanner();
+  const isCar = item.kind === "car";
+  const raw = isCar ? state.car : (state.debts[item.index] || {});
+  const [d, setD] = useState(
+    isCar
+      ? { bal: raw.balance ?? "", min: raw.payment ?? "", rate: raw.rate ?? "" }
+      : { name: raw.name ?? "", bal: raw.bal ?? "", min: raw.min ?? "", rate: raw.rate ?? "", iffree: !!raw.iffree, ifuntil: raw.ifuntil ?? "" }
+  );
+  const set = (k, v) => setD((s) => ({ ...s, [k]: v }));
+
+  const save = () => {
+    if (isCar) {
+      update((s) => ({ ...s, car: { ...s.car, balance: d.bal, payment: d.min, rate: d.rate } }));
+    } else {
+      update((s) => ({ ...s, debts: s.debts.map((x, j) => (j === item.index ? { ...x, name: d.name, bal: d.bal, min: d.min, rate: d.rate, iffree: d.iffree, ifuntil: d.iffree ? d.ifuntil : "" } : x)) }));
+    }
+    onSaved(`Updated ${isCar ? "Car Loan" : (d.name || "debt")}.`);
+  };
+
+  const remove = () => {
+    if (!window.confirm(`Remove ${isCar ? "your car loan" : (d.name || "this debt")}? This deletes it from your plan.`)) return;
+    if (isCar) update((s) => ({ ...s, car: { ...s.car, on: false, balance: "", payment: "", rate: "" } }));
+    else update((s) => ({ ...s, debts: s.debts.filter((_, j) => j !== item.index) }));
+    onSaved(`Removed ${isCar ? "Car Loan" : (d.name || "debt")}.`);
+  };
+
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-[#0c121d] p-4">
+      <h4 className="mb-3 font-semibold">Edit {isCar ? "Car Loan" : (raw.name || "debt")}</h4>
+      <div className="grid gap-3 sm:grid-cols-4">
+        {!isCar && (
+          <MiniField label="Name">
+            <input value={d.name} onChange={(e) => set("name", e.target.value)}
+              className="w-full rounded-[10px] border border-border bg-[#0b0f17] px-3 py-[11px] text-[15px] text-ink outline-none focus:border-accent" />
+          </MiniField>
+        )}
+        <MiniField label="Balance"><MoneyInput value={d.bal} onChange={(v) => set("bal", v)} /></MiniField>
+        <MiniField label={isCar ? "Monthly payment" : "Min / month"}><MoneyInput value={d.min} onChange={(v) => set("min", v)} /></MiniField>
+        <MiniField label="Rate">
+          <span className="relative block">
+            <input type="number" inputMode="decimal" min="0" step="0.1" value={d.rate} onChange={(e) => set("rate", e.target.value)}
+              className="w-full rounded-[10px] border border-border bg-[#0b0f17] py-[11px] pl-3 pr-7 text-[15px] text-ink outline-none focus:border-accent" />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">%</span>
+          </span>
+        </MiniField>
+      </div>
+
+      {!isCar && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px]">
+          <label className="inline-flex cursor-pointer items-center gap-2">
+            <input type="checkbox" checked={d.iffree} onChange={(e) => set("iffree", e.target.checked)} className="h-4 w-4 accent-[#2fe6a6]" />
+            Interest-free period (0%)
+          </label>
+          {d.iffree && (
+            <span className="inline-flex items-center gap-2 text-muted">until
+              <input type="month" value={d.ifuntil} onChange={(e) => set("ifuntil", e.target.value)}
+                className="rounded-[10px] border border-border bg-[#0b0f17] px-2.5 py-2 text-sm text-ink outline-none focus:border-accent" />
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button onClick={save} className="px-4 py-2.5 text-sm">Save changes</Button>
+        <Button variant="ghost" onClick={onCancel} className="px-3.5 py-2.5 text-sm">Cancel</Button>
+        <div className="flex-1" />
+        <button onClick={remove} className="rounded-xl border border-[#5a1f1f] bg-[#1a0f0f] px-3.5 py-2.5 text-sm font-semibold text-bad transition hover:brightness-125">Remove</button>
+      </div>
+    </div>
   );
 }
 
@@ -230,7 +361,7 @@ function PayForm({ items, onCancel, onPay }) {
 }
 
 function AddForm({ onCancel, onAdd }) {
-  const [d, setD] = useState({ name: "", bal: "", min: "", rate: "" });
+  const [d, setD] = useState({ name: "", bal: "", min: "", rate: "", iffree: false, ifuntil: "" });
   const set = (k, v) => setD((s) => ({ ...s, [k]: v }));
   const ok = (parseFloat(d.bal) || 0) > 0;
   return (
@@ -250,6 +381,18 @@ function AddForm({ onCancel, onAdd }) {
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">%</span>
           </span>
         </MiniField>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px]">
+        <label className="inline-flex cursor-pointer items-center gap-2">
+          <input type="checkbox" checked={d.iffree} onChange={(e) => set("iffree", e.target.checked)} className="h-4 w-4 accent-[#2fe6a6]" />
+          Interest-free period (0%)
+        </label>
+        {d.iffree && (
+          <span className="inline-flex items-center gap-2 text-muted">until
+            <input type="month" value={d.ifuntil} onChange={(e) => set("ifuntil", e.target.value)}
+              className="rounded-[10px] border border-border bg-[#0b0f17] px-2.5 py-2 text-sm text-ink outline-none focus:border-accent" />
+          </span>
+        )}
       </div>
       <div className="mt-3 flex gap-2">
         <Button onClick={() => ok && onAdd(d)} disabled={!ok} className="px-4 py-2.5 text-sm">Add debt</Button>
