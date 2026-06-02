@@ -5,7 +5,7 @@ import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
 } from "../state.jsx";
 import { SECTIONS, sectionByKey } from "../data/sections.js";
-import { fmt, monthsToStr, buildPlans, simulateDetailed, projectRetirement, projectSavings } from "../lib/engine.js";
+import { fmt, monthsToStr, buildPlans, simulateDetailed, projectSavings } from "../lib/engine.js";
 import Savings from "./Savings.jsx";
 import Career from "./Career.jsx";
 import Results from "./Results.jsx";
@@ -157,14 +157,6 @@ function Overview({ onOpenTab, onEdit }) {
   }, [expItems, minTotal]);
   const breakdownSum = breakdown.reduce((s, c) => s + c.value, 0);
 
-  const age = parseInt(state.age, 10);
-  const retire = useMemo(() => projectRetirement({
-    age, retireAge: 60, annualRate: 0.045,
-    monthlyWhileDebt: spare, monthlyAfterDebt: income * 0.2,
-    debtMonths: balanced && isFinite(balanced.sim.months) ? balanced.sim.months : 0,
-    startingPot: 0,
-  }), [age, spare, income, balanced]);
-
   const recs = buildRecommendations({ debts, income, living, spare, mortgageOn: state.mortgage.on });
 
   return (
@@ -223,7 +215,6 @@ function Overview({ onOpenTab, onEdit }) {
       <div className="flex flex-col gap-4">
         <MonthlyFigures income={income} spent={living + debtMonthly} left={funLeft} saved={aSav} over={overBudget} />
         <Snapshot6 income={income} living={living} debts={debts} extra={aExtra} monthlyToDebt={debtMonthly} totalDebt={totalDebt} />
-        <RetirementCard retire={retire} age={age} />
       </div>
 
       {/* Quick actions */}
@@ -354,29 +345,6 @@ function Snapshot6({ income, living, debts, extra, monthlyToDebt, totalDebt }) {
 
 function Legend({ c, t }) {
   return <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c }} />{t}</span>;
-}
-
-function RetirementCard({ retire, age }) {
-  if (!retire) {
-    return (
-      <Card>
-        <h3 className="mb-1 font-bold">Retirement</h3>
-        <p className="text-[13px] text-muted">Add your age to project your pot at 60.</p>
-      </Card>
-    );
-  }
-  return (
-    <Card className="lg:p-5">
-      <div className="flex items-baseline justify-between">
-        <h3 className="font-bold">Retirement<InfoTip text="A rough projection of your savings pot at 60 if you keep putting money aside each month, growing ~4.5% a year. Not a guarantee." /></h3>
-        <span className="text-[12px] text-muted">at age 60</span>
-      </div>
-      <div className="mt-1.5 text-[28px] font-extrabold leading-none text-accent">{fmt(retire.balanceAtRetirement)}</div>
-      <p className="mt-2 text-[12px] leading-relaxed text-muted">
-        From age {age || "—"} you'd pay in <b className="text-ink">{fmt(retire.totalContributed)}</b> and earn <b className="text-good">{fmt(retire.totalInterest)}</b> in growth (4.5%/yr).
-      </p>
-    </Card>
-  );
 }
 
 function ActionCard({ emoji, title, desc, onOpen, soon }) {
