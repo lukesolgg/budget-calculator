@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PlannerProvider, usePlanner, debtsOf } from "./state.jsx";
-import { AuthProvider } from "./lib/auth.jsx";
+import { AuthProvider, useAuth } from "./lib/auth.jsx";
 import Welcome from "./screens/Welcome.jsx";
 import Wizard from "./screens/Wizard.jsx";
 import Inputs from "./screens/Inputs.jsx";
@@ -10,6 +10,7 @@ import Account from "./components/Account.jsx";
 
 function Shell() {
   const { state } = usePlanner();
+  const { session } = useAuth();
   const [screen, setScreen] = useState("welcome");
   const [signInSignal, setSignInSignal] = useState(0);
   const [wizardFirst, setWizardFirst] = useState(false);
@@ -26,6 +27,15 @@ function Shell() {
     } catch { return false; }
   })();
 
+  const startNew = () => { setWizardFirst(true); go("wizard"); };
+  // "Continue" only goes to the dashboard if actually signed in. A local draft
+  // means they have an account (it's required) — so make them log in first.
+  const onContinue = () => {
+    if (session) return go("dashboard");
+    if (hasDraft) return setSignInSignal((n) => n + 1); // open the sign-in modal
+    startNew();
+  };
+
   return (
     <div className={`mx-auto px-4 pb-16 pt-6 sm:px-6 ${screen === "dashboard" ? "max-w-[1840px]" : "max-w-[1240px]"}`}>
       <Account
@@ -33,12 +43,13 @@ function Shell() {
         showBar={screen !== "welcome"}
         onLogout={() => go("welcome")}
         onSignedIn={() => go("dashboard")}
+        onCreateAccount={startNew}
       />
       {screen === "welcome" && (
         <Welcome
-          onNew={() => (hasDraft ? go("dashboard") : (setWizardFirst(true), go("wizard")))}
+          onNew={onContinue}
           onReturn={() => setSignInSignal((n) => n + 1)}
-          hasDraft={hasDraft}
+          hasDraft={hasDraft || !!session}
         />
       )}
       {screen === "wizard" && (

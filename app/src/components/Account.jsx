@@ -5,7 +5,7 @@ import { useAuth } from "../lib/auth.jsx";
 
 // Account bar (top-right) + sign-in modal. Progress auto-saves to the cloud
 // while signed in (no manual Save button).
-export default function Account({ openSignal, showBar = true, onLogout, onSignedIn }) {
+export default function Account({ openSignal, showBar = true, onLogout, onSignedIn, onCreateAccount }) {
   const { session, saveState, login, logout } = useAuth();
   const [modal, setModal] = useState(false);
 
@@ -30,6 +30,7 @@ export default function Account({ openSignal, showBar = true, onLogout, onSigned
         <SignInModal
           onClose={() => setModal(false)}
           onSignedIn={() => { setModal(false); onSignedIn?.(); }}
+          onCreateAccount={() => { setModal(false); onCreateAccount?.(); }}
           login={login}
         />
       )}
@@ -45,7 +46,7 @@ function SaveStatus({ state }) {
   return <span className="inline-flex items-center gap-1.5 text-[12px] text-good"><span className="h-2 w-2 rounded-full bg-good" />All changes saved</span>;
 }
 
-function SignInModal({ onClose, onSignedIn, login }) {
+function SignInModal({ onClose, onSignedIn, onCreateAccount, login }) {
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -83,7 +84,13 @@ function SignInModal({ onClose, onSignedIn, login }) {
 
         <div className="mb-3.5 min-h-[16px] text-[13px] text-bad">{err}</div>
         <Button onClick={submit} disabled={busy} className="w-full">{busy ? "Please wait…" : "Sign in"}</Button>
-        <div className="mt-3.5 text-center text-[11px] text-muted">{useSupabase ? "Synced securely across devices." : "Demo mode: saved in this browser only."}</div>
+        {onCreateAccount && (
+          <div className="mt-4 border-t border-border pt-3.5 text-center text-[13px] text-muted">
+            New to Orcl.?{" "}
+            <button onClick={onCreateAccount} className="font-semibold text-accent hover:underline">Create an account</button>
+          </div>
+        )}
+        <div className="mt-3 text-center text-[11px] text-muted">{useSupabase ? "Synced securely across devices." : "Demo mode: saved in this browser only."}</div>
       </div>
     </div>
   );

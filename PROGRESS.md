@@ -64,6 +64,11 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Auth gate fix: "Continue where you left off" no longer opens the dashboard
+  from a stale localStorage draft when not signed in. Shell now reads useAuth
+  session: signed in → dashboard; has a draft but no session → opens the sign-in
+  modal (accounts are required, so a draft implies an account); brand new →
+  onboarding. Sign-in modal gained a "Create an account" link (→ onboarding).
 - Overview + onboarding plan step:
   - Onboarding now routes budget → (first-time debtors) payoff-plan selection →
     dashboard. App.jsx `finishInputs` goes to a new "plan" screen = Results with
