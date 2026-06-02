@@ -82,7 +82,7 @@ export default function Wizard({ firstRun, onDone, onExitTop }) {
         <Button onClick={next} disabled={acct.busy}>
           {step === "account" && !session
             ? (acct.busy ? "Creating…" : "Create account")
-            : lastStep ? "Continue to budget" : "Continue"}
+            : lastStep ? "Finish setup" : "Continue"}
           {!(step === "account" && acct.busy) && <Chevron />}
         </Button>
       </div>

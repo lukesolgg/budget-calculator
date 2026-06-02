@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { freqToMonthly, monthsUntil } from "./lib/engine.js";
+import { freqToMonthly, monthsUntil, buildPlans } from "./lib/engine.js";
 import { serialize, deserialize } from "./lib/profile.js";
 
 // Expense categories (key, label, colour) — drives the budget grid + donut.
@@ -180,4 +180,38 @@ export function expenseItemsOf(s) {
     if (p > 0) items.unshift({ key: "mortgage", name: "Mortgage", color: MORTGAGE_COLOR, value: p });
   }
   return items;
+}
+
+// The monthly money split for the chosen plan (mirrors the Detail sliders incl.
+// a locked custom split). Shared by the Overview cards and the Budget tab.
+export function budgetMathOf(s) {
+  const income = monthlyIncomeOf(s);
+  const debts = debtsOf(s);
+  const living = livingOf(s);
+  const minTotal = debts.reduce((a, d) => a + d.min, 0);
+  const totalDebt = debts.reduce((a, d) => a + d.balance, 0);
+  const { plans } = buildPlans(debts, income, living);
+  const balanced = plans.find((p) => p.def.key === "balanced") || plans[0];
+  const chosen = plans.find((p) => p.def.key === s.selectedPlan) || balanced;
+  const hasDebt = debts.length > 0;
+
+  const available = Math.max(0, income - living);
+  const baseToDebt = Math.min(minTotal, available);
+  const pool = Math.max(0, available - baseToDebt);
+  const funCap = income * 0.3;
+  let extra = 0, fun = 0, savings = 0;
+  if (hasDebt) {
+    if (s.allocLocked && s.alloc) {
+      extra = s.alloc.extra || 0; fun = s.alloc.fun || 0; savings = s.alloc.savings || 0;
+    } else {
+      extra = Math.min(pool, pool * (chosen?.def.share ?? 0.25));
+      const rest = Math.max(0, pool - extra);
+      fun = Math.min(rest / 2, funCap);
+      savings = Math.max(0, rest - fun);
+    }
+  }
+  const spare = Math.max(0, income - living - minTotal);
+  const debtMonthly = hasDebt ? baseToDebt + extra : 0;
+  const funLeft = hasDebt ? fun : spare;
+  return { income, debts, living, minTotal, totalDebt, plans, chosen, balanced, hasDebt, extra, fun: funLeft, savings, debtMonthly, spare };
 }

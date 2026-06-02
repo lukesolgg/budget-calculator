@@ -64,6 +64,16 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Budget is now its own dashboard tab (Budget.jsx), removed from onboarding:
+  editable per-category amounts (monthly, with a Per-week equivalent toggle),
+  mortgage shown read-only (edit in details), totals (income/spending/left per
+  period), the breakdown donut, and the AllocationCard. AllocationCard moved to
+  components/AllocationCard.jsx (shared by Overview + Budget). New
+  budgetMathOf(s) selector in state.jsx (chosen-plan money split) used by both.
+  Onboarding flow: wizard → (plan if first-time debtor) → dashboard; the old
+  Inputs.jsx budget step is retired (file orphaned). "Edit my details" → wizard
+  (personal details); In-depth budget / empty-state → Budget tab. Wizard final
+  button now "Finish setup".
 - Weekly/payday budget view: replaced the Overview "This month" card with an
   AllocationCard ("Each payday"/"Each month") — a Per-{week/fortnight} ↔ Monthly
   toggle (defaults to per-payday for weekly/fortnightly users) that rescales via

@@ -124,8 +124,8 @@ function GoalsCard({ state, update }) {
 
 function DetailsCard({ onEdit }) {
   return (
-    <Section title="Your details" desc="Income, age, mortgage, car, pets, debts and budget.">
-      <Button variant="ghost" onClick={onEdit} className="px-3.5 py-2 text-[13px]">Edit budget &amp; details</Button>
+    <Section title="Your details" desc="Income, age, pay frequency, mortgage, car, pets and debts. (Edit your spending in the Budget tab.)">
+      <Button variant="ghost" onClick={onEdit} className="px-3.5 py-2 text-[13px]">Edit my details</Button>
     </Section>
   );
 }
