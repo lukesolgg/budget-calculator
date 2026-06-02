@@ -279,18 +279,22 @@ function Snapshot6({ income, living, debts, extra, monthlyToDebt, totalDebt }) {
   const essentials = living;
 
   const now = new Date();
+  const debtFreeMonth = sim ? (isFinite(sim.months) ? sim.months : sim.schedule.length) : 0;
   const months = Array.from({ length: n }, (_, i) => {
     const label = new Date(now.getFullYear(), now.getMonth() + i, 1).toLocaleString("en-GB", { month: "short" });
-    const inDebt = sim && i < sim.schedule.length;
-    let debtPaid = 0, bal = 0;
-    if (inDebt) {
-      debtPaid = sim.schedule[i].pay.reduce((s, p) => s + p, 0);
-      bal = sim.schedule[i].bal.reduce((s, b) => s + b, 0);
-    }
+    const hasSched = sim && i < sim.schedule.length;
+    const inDebt = sim && i < debtFreeMonth;
+    const debtPaid = inDebt && hasSched ? sim.schedule[i].pay.reduce((s, p) => s + p, 0) : 0;
+    const bal = hasSched ? sim.schedule[i].bal.reduce((s, b) => s + b, 0) : 0;
     // Anything not spent on essentials/debt goes to savings & spare.
     const saved = Math.max(0, income - essentials - debtPaid);
     return { label, essentials, debtPaid, saved, bal };
   });
+
+  // Debt-balance trajectory for the overlay line (falls from today's debt to 0).
+  const maxBal = Math.max(totalDebt, 1);
+  const linePts = [`0,${(1 - Math.min(1, totalDebt / maxBal)) * 100}`,
+    ...months.map((m, i) => `${i + 0.5},${(1 - Math.min(1, m.bal / maxBal)) * 100}`)].join(" ");
 
   const maxStack = Math.max(income, ...months.map((m) => m.essentials + m.debtPaid + m.saved), 1);
   const clearsWithin = hasDebt && sim && sim.schedule.length <= n;
@@ -319,25 +323,35 @@ function Snapshot6({ income, living, debts, extra, monthlyToDebt, totalDebt }) {
           ? <>You're debt-free in <b className="text-ink">{monthsToStr(sim.months)}</b> — then your money shifts to a 50/30/20 savings split.</>
           : <>Paying <b className="text-ink">{fmt(monthlyToDebt)}</b>/mo, your debt drops from <b className="text-ink">{fmt(totalDebt)}</b> to <b className="text-good">{fmt(endBal)}</b> over {rangeWord}.</>}
       </p>
-      <div className={`flex h-[180px] items-stretch ${thin ? "gap-1" : "gap-2"}`}>
-        {months.map((m, i) => {
-          const h = (v) => `${(v / maxStack) * 100}%`;
-          return (
-            <div key={i} className="flex h-full flex-1 flex-col items-center">
-              <div className="flex w-full flex-1 flex-col justify-end overflow-hidden rounded-md bg-[#0a0f17]">
+      <div className="relative h-[150px]">
+        <div className={`flex h-full items-stretch ${thin ? "gap-1" : "gap-2"}`}>
+          {months.map((m, i) => {
+            const h = (v) => `${(v / maxStack) * 100}%`;
+            return (
+              <div key={i} className="flex h-full flex-1 flex-col justify-end overflow-hidden rounded-md bg-[#0a0f17]">
                 {m.saved > 0 && <div style={{ height: h(m.saved), background: "#3ad07f" }} title={`Savings/spare ${fmt(m.saved)}`} />}
                 {m.debtPaid > 0 && <div style={{ height: h(m.debtPaid), background: "#f0556f" }} title={`Debt ${fmt(m.debtPaid)}`} />}
                 <div style={{ height: h(m.essentials), background: "#4cb8f0", minHeight: m.essentials > 0 ? 2 : 0 }} title={`Essentials ${fmt(m.essentials)}`} />
               </div>
-              {(!thin || i % 2 === 0) && <span className="mt-2 text-[10px] text-muted">{m.label}</span>}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        {hasDebt && totalDebt > 0 && (
+          <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${n} 100`} preserveAspectRatio="none">
+            <polyline points={linePts} fill="none" stroke="#eef2ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          </svg>
+        )}
+      </div>
+      <div className={`mt-2 flex ${thin ? "gap-1" : "gap-2"}`}>
+        {months.map((m, i) => (
+          <span key={i} className="flex-1 text-center text-[10px] text-muted">{(!thin || i % 2 === 0) ? m.label : ""}</span>
+        ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
         <Legend c="#4cb8f0" t="Essentials" />
-        {hasDebt && <Legend c="#f0556f" t="Debt" />}
+        {hasDebt && <Legend c="#f0556f" t="Debt paid" />}
         <Legend c="#3ad07f" t="Savings / spare" />
+        {hasDebt && totalDebt > 0 && <span className="inline-flex items-center gap-1.5"><span className="h-[2px] w-3.5 rounded bg-[#eef2ff]" />Debt left</span>}
       </div>
     </Card>
   );
