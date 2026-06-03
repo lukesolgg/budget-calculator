@@ -64,6 +64,12 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Brand: new Orcl. logo — `components/Logo.jsx` (gradient orb + rising-arrow mark,
+  plus `badge` app-icon variant); favicon.svg + orcl-logo.svg in app/public;
+  used in landing nav + dashboard header. Alt concepts + lockup in `brand/`.
+- Overview: budget list now GROUPED (Income / Essentials / Debt payments /
+  Savings & spare, each with a subtotal) via GroupedBudget; the "What do you
+  want to do?" actions moved INTO the donut card (below the plan banner).
 - Budget is now its own dashboard tab (Budget.jsx), removed from onboarding:
   editable per-category amounts (monthly, with a Per-week equivalent toggle),
   mortgage shown read-only (edit in details), totals (income/spending/left per
