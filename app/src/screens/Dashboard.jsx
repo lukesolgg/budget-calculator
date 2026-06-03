@@ -153,12 +153,16 @@ function Overview({ onOpenTab, onEdit }) {
   const funLeft = hasDebt ? aFun : spare;                  // free to spend
   const overBudget = living + minTotal > income + 0.5;
 
-  // Donut + budget list: expenses + debt minimums, biggest → smallest.
+  // Donut + budget list: every pound of income — essentials, debt (min + the
+  // plan's extra), savings and free-to-spend per the chosen plan / slider.
   const breakdown = useMemo(() => {
     const items = [...expItems];
     if (minTotal > 0) items.push({ key: "debtmin", name: "Debt payments", color: "#ff4d6d", value: minTotal });
+    if (aExtra > 0.5) items.push({ key: "debtextra", name: "Extra to debt", color: "#ff8fa3", value: aExtra });
+    if (aSav > 0.5) items.push({ key: "savings", name: "Savings", color: "#3ad07f", value: aSav });
+    if (funLeft > 0.5) items.push({ key: "fun", name: "Free to spend", color: "#f5953a", value: funLeft });
     return items.sort((a, b) => b.value - a.value);
-  }, [expItems, minTotal]);
+  }, [expItems, minTotal, aExtra, aSav, funLeft]);
   const breakdownSum = breakdown.reduce((s, c) => s + c.value, 0);
 
   const recs = buildRecommendations({ debts, income, living, spare, mortgageOn: state.mortgage.on });
