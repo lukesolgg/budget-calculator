@@ -41,21 +41,16 @@ export default function Savings({ onBack, embedded }) {
       )}
 
       {/* Hero */}
-      <Card className="mb-7 overflow-hidden !p-0">
-        <div className="grid grid-cols-1 items-center gap-6 p-6 sm:p-8 md:grid-cols-[1.3fr_1fr]">
+      <Card className="mb-5 overflow-hidden !p-0">
+        <div className="grid grid-cols-1 items-center gap-5 p-5 sm:p-6 md:grid-cols-[1.4fr_1fr]">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#1e3a30] bg-[#0c1a15] px-3 py-1 text-[11px] font-bold uppercase tracking-[.08em] text-accent">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#1e3a30] bg-[#0c1a15] px-3 py-1 text-[10px] font-bold uppercase tracking-[.08em] text-accent">
               Live UK rates · updated {SAVINGS_LAST_UPDATED}
             </span>
-            <h1 className="mt-3 text-[30px] font-extrabold leading-tight tracking-tight">
+            <h1 className="mt-2.5 text-[24px] font-extrabold leading-tight tracking-tight">
               Make your spare cash <span className="text-accent">actually work</span>.
             </h1>
-            <p className="mt-2.5 max-w-[460px] text-[15px] leading-relaxed text-muted">
-              These are some of the most competitive UK savings accounts right now — hand-picked across
-              easy-access, regular savers, fixed bonds and cash ISAs. Tap any account to forecast exactly
-              what it could earn you.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-6">
+            <div className="mt-4 flex flex-wrap gap-6">
               <Headline value={`${topRate.toFixed(2)}%`} label="Top rate available" />
               <Headline value={fmt(spare)} label="Your spare / month" />
               <Headline value={SAVINGS_ACCOUNTS.length} label="Accounts tracked" />
@@ -65,14 +60,15 @@ export default function Savings({ onBack, embedded }) {
         </div>
       </Card>
 
-      {/* Tables per category */}
+      {/* Tables per category (scrollable) */}
+      <div className="max-h-[480px] space-y-4 overflow-y-auto thin-scroll pr-1">
       {grouped.map((g) => (
-        <Card key={g.type} className="mb-6 overflow-hidden">
+        <Card key={g.type} className="overflow-hidden lg:p-5">
           <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-lg font-bold">{g.type}</h3>
             <span className="text-[13px] text-muted">{TYPE_BLURB[g.type]}</span>
           </div>
-          <div className="-mx-6 overflow-x-auto px-6">
+          <div className="-mx-5 overflow-x-auto px-5">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-[.05em] text-muted">
@@ -102,8 +98,9 @@ export default function Savings({ onBack, embedded }) {
           </div>
         </Card>
       ))}
+      </div>
 
-      <p className="mt-2 text-center text-[11px] text-muted">
+      <p className="mt-3 text-center text-[11px] text-muted">
         All accounts FSCS protected up to £85,000. Rates change often — always check the provider before applying. General information, not financial advice.
       </p>
     </div>
