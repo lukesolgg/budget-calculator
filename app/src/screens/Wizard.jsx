@@ -5,7 +5,8 @@ import {
 } from "../state.jsx";
 import { useAuth } from "../lib/auth.jsx";
 import { SECTIONS } from "../data/sections.js";
-import { fmt } from "../lib/engine.js";
+import { fmt, freqLabel } from "../lib/engine.js";
+import { dueDayFromDate, nextDateForDay } from "../lib/planner.js";
 
 export default function Wizard({ firstRun, onDone, onExitTop }) {
   const { state, update } = usePlanner();
@@ -21,7 +22,7 @@ export default function Wizard({ firstRun, onDone, onExitTop }) {
   // Dynamic step list. Car-loan details only appear if they own a car.
   const steps = [];
   if (includeAccount) steps.push("account", "goals");
-  steps.push("age", "freq", "income", "mortgage", "carown");
+  steps.push("age", "freq", "payday", "income", "mortgage", "carown");
   if (state.car.owns) steps.push("car");
   steps.push("pets", "debts");
 
@@ -68,6 +69,7 @@ export default function Wizard({ firstRun, onDone, onExitTop }) {
         {step === "goals" && <GoalsStep state={state} update={update} />}
         {step === "age" && <AgeStep state={state} update={update} />}
         {step === "freq" && <FreqStep state={state} update={update} />}
+        {step === "payday" && <PaydayStep state={state} update={update} />}
         {step === "income" && <IncomeStep state={state} update={update} income={income} />}
         {step === "mortgage" && <MortgageStep state={state} update={update} />}
         {step === "carown" && <CarOwnStep state={state} update={update} />}
@@ -421,6 +423,20 @@ function FreqStep({ state, update }) {
   );
 }
 
+function PaydayStep({ state, update }) {
+  const noun = freqLabel(state.payFrequency) || "month";
+  return (
+    <>
+      <StepHead kicker="Getting started" title="When's your next payday?" sub={`We'll use this to plan which bills and debts to pay from each ${noun}'s pay.`} />
+      <div className="mx-auto max-w-[280px]">
+        <input type="date" value={state.payAnchor || ""} onChange={(e) => update({ payAnchor: e.target.value })}
+          className="w-full rounded-xl border border-border bg-[#0c121d] px-4 py-3.5 text-center text-[18px] font-bold text-ink outline-none transition focus:border-accent" />
+      </div>
+      <p className="mt-3 text-center text-[13px] text-muted">You can skip this and set it later in the Planner.</p>
+    </>
+  );
+}
+
 function IncomeStep({ state, update, income }) {
   const q = {
     weekly: "What's your weekly take-home pay?",
@@ -501,7 +517,7 @@ function DebtsStep({ state, update, validDebts }) {
   const setDebt = (i, patch) =>
     update((s) => ({ ...s, debts: s.debts.map((d, j) => (j === i ? { ...d, ...patch } : d)) }));
   const addDebt = () =>
-    update((s) => (s.debts.length >= MAX_DEBTS ? s : { ...s, debts: [...s.debts, { name: "", bal: "", min: "", rate: "", iffree: false, ifuntil: "" }] }));
+    update((s) => (s.debts.length >= MAX_DEBTS ? s : { ...s, debts: [...s.debts, { name: "", bal: "", min: "", rate: "", iffree: false, ifuntil: "", dueDay: "" }] }));
   const delDebt = (i) =>
     update((s) => ({ ...s, debts: s.debts.filter((_, j) => j !== i) }));
 
@@ -534,6 +550,11 @@ function DebtsStep({ state, update, validDebts }) {
                     className="h-11 rounded-[10px] border border-border bg-[#1a2230] text-xl leading-none text-bad hover:brightness-125">×</button>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3.5">
+                  <span className="inline-flex items-center gap-2 text-[13px] text-muted">
+                    Next payment due
+                    <input type="date" value={d.dueDay ? nextDateForDay(+d.dueDay) : ""} onChange={(e) => setDebt(i, { dueDay: dueDayFromDate(e.target.value) })}
+                      className="rounded-[10px] border border-border bg-[#0c121d] px-2.5 py-2 text-sm text-ink outline-none focus:border-accent" />
+                  </span>
                   <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[13px]">
                     <GlowCheck checked={d.iffree} onChange={(v) => setDebt(i, { iffree: v })} /> Interest-free period (e.g. 0% credit card)
                   </label>
