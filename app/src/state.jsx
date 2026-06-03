@@ -53,6 +53,7 @@ export const initialState = {
   debtBaseline: 0,          // peak total debt seen — basis for "cleared so far"
   lastPaymentMonth: "",     // "YYYY-MM" of last logged payment (reminder nudge)
   payAnchor: "",            // "YYYY-MM-DD" next payday — recurs by payFrequency
+  emergency: { saved: "", target: 0, variable: false, dependents: false }, // emergency fund
 };
 
 const DRAFT_KEY = "dfp_draft_react";
@@ -80,6 +81,7 @@ export function hydrate(flat) {
     pets,
     goals: { primary: flat.goals?.primary || "", interests: flat.goals?.interests || {} },
     billDue: flat.billDue || {},
+    emergency: { ...initialState.emergency, ...(flat.emergency || {}) },
     debtBaseline: flat.debtBaseline || 0,
     lastPaymentMonth: flat.lastPaymentMonth || "",
     payAnchor: flat.payAnchor || "",

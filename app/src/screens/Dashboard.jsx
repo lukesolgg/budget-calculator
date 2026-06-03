@@ -15,8 +15,9 @@ import Detail from "./Detail.jsx";
 import Settings from "./Settings.jsx";
 import Budget from "./Budget.jsx";
 import Planner from "./Planner.jsx";
+import Emergency from "./Emergency.jsx";
 
-const LIVE = new Set(["debt", "savings", "career"]);
+const LIVE = new Set(["debt", "savings", "career", "emergency"]);
 const TONE = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 
 // Sidebar shell: Overview is the home panel; sections are in-place tabs.
@@ -95,8 +96,9 @@ export default function Dashboard({ onEdit, onLogout }) {
             : <Results embedded onPickPlan={(k) => { setDetailPlan(k); window.scrollTo({ top: 0, behavior: "smooth" }); }} />)}
           {tab === "savings" && <Savings embedded />}
           {tab === "career" && <Career embedded />}
+          {tab === "emergency" && <Emergency onOpenTab={go} />}
           {tab === "settings" && <Settings onEdit={onEdit} onLogout={onLogout} />}
-          {!["overview", "budget", "planner", "debt", "savings", "career", "settings"].includes(tab) && <ComingSoon section={sectionByKey(tab)} onBack={() => go("overview")} />}
+          {!["overview", "budget", "planner", "debt", "savings", "career", "emergency", "settings"].includes(tab) && <ComingSoon section={sectionByKey(tab)} onBack={() => go("overview")} />}
         </main>
       </div>
     </div>
@@ -218,7 +220,7 @@ function Overview({ onOpenTab, onEdit }) {
           <div className="grid grid-cols-2 gap-3">
             <ActionCard emoji="🔎" title="In-depth budget" desc="Tweak every part of your budget." onOpen={() => onOpenTab("budget")} />
             <ActionCard emoji="💳" title="Debt planning" desc="Your payoff plan & payments." onOpen={() => onOpenTab("debt")} />
-            <ActionCard emoji="🛟" title="Emergency fund" desc="Plan a 3–6 month safety net." soon />
+            <ActionCard emoji="🛟" title="Emergency fund" desc="Plan a 3–6 month safety net." onOpen={() => onOpenTab("emergency")} />
             <ActionCard emoji="🚀" title="Side hustles" desc="Boost your income." soon />
           </div>
         </div>

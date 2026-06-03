@@ -21,7 +21,7 @@ export const SECTIONS = [
     desc: "Promotions, second-job ideas and pay comparisons for your field.",
   },
   {
-    key: "emergency", emoji: "🛟", title: "Emergency fund", live: false,
+    key: "emergency", emoji: "🛟", title: "Emergency fund", live: true,
     goalLabel: "Build a safety net",
     desc: "Plan a 3–6 month cushion so a surprise bill never derails you.",
   },
