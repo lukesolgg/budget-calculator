@@ -1,0 +1,17 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orcl" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12b886"/>
+      <stop offset="0.55" stop-color="#2fe6a6"/>
+      <stop offset="1" stop-color="#5fd6ff"/>
+    </linearGradient>
+  </defs>
+  <!-- orb ring -->
+  <circle cx="24" cy="24" r="16" stroke="url(#orcl)" stroke-width="4.5" fill="none"/>
+  <!-- rising bars (growth) -->
+  <g fill="url(#orcl)">
+    <rect x="16.5" y="27" width="4.5" height="9"  rx="2.2"/>
+    <rect x="21.75" y="22" width="4.5" height="14" rx="2.2"/>
+    <rect x="27" y="16.5" width="4.5" height="19.5" rx="2.2"/>
+  </g>
+</svg>

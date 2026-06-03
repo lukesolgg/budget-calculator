@@ -1,0 +1,13 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orcl" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12b886"/>
+      <stop offset="0.55" stop-color="#2fe6a6"/>
+      <stop offset="1" stop-color="#5fd6ff"/>
+    </linearGradient>
+  </defs>
+  <!-- orb ring -->
+  <circle cx="24" cy="24" r="16" stroke="url(#orcl)" stroke-width="4.5" fill="none"/>
+  <!-- foresight spark -->
+  <path d="M24 14 C25.4 22.6 25.4 22.6 34 24 C25.4 25.4 25.4 25.4 24 34 C22.6 25.4 22.6 25.4 14 24 C22.6 22.6 22.6 22.6 24 14 Z" fill="url(#orcl)"/>
+</svg>
