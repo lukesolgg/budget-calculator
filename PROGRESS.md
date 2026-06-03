@@ -64,6 +64,27 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Overnight TODO batch (Luke's list), committed per stage:
+  1. Global input styling (index.css): killed number spinners, dark date pickers
+     (color-scheme + indicator filter), .app-select chevron, .thin-scroll.
+  2. Per-bill payment FREQUENCY (weekly/fortnightly/monthly): billDue[key] now
+     {freq,day} (normBill migrates old number). billDueItemsOf returns freq+
+     amountMonthly. lib/planner.js `occurrences()` generates weekly/fortnightly/
+     monthly dates; Planner uses per-occurrence amounts (monthlyToFreq). Budget
+     table reworked: Category | Amount | How often | Due, scrollable, one-screen.
+  3. Removed orphaned Inputs.jsx.
+  4. Savings tab density + scrollable account list (partial "one-screen" pass —
+     Debt(one-frame)/Budget/Planner/Savings done; Overview ok; Career + Settings
+     NOT yet deep-compacted — TODO).
+  5. Onboarding now captures payment dates: new "payday" wizard step (payAnchor)
+     + per-debt due-date picker in the debts step.
+  6. Emergency Fund page LIVE (screens/Emergency.jsx): tailored target (3/6 mo of
+     essentials via 2 lifestyle toggles + £1k starter if in debt), progress bar,
+     time-to-reach slider, where-to-keep link. state.emergency {saved,target,
+     variable,dependents}; schema 10. Quick-action card + section now live.
+  - Git author fixed to lukesolgg@gmail.com.
+  - STILL TODO from the list: finish "every tab one screen" (Career, Settings,
+    maybe Overview recs); broader unused-code/efficiency tidy.
 - Planner tab + Debt tab one-frame redesign: calendar/payday scheduler moved out
   of the Debt tab into its own "Planner" sidebar tab (screens/Planner.jsx); shared
   helpers in lib/planner.js (debtTone + date helpers). Debt tab is now a single
