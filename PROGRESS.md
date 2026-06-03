@@ -64,6 +64,13 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Payment calendar on the Debt tab (Results.jsx → DebtCalendar): each debt now
+  has a due date (date picker in add/edit → stored as dueDay), plus a payday
+  anchor (state.payAnchor, schema 8) entered as the next payday and recurred by
+  pay frequency. Shows a monthly calendar (due markers + 💷 paydays) and a "what
+  to set aside each payday" schedule (bills due before the next payday). Date
+  helpers (generatePaydays/nextDueOnOrAfter/etc.) local to Results.jsx; engine
+  untouched.
 - Brand: new Orcl. logo — `components/Logo.jsx` (gradient orb + rising-arrow mark,
   plus `badge` app-icon variant); favicon.svg + orcl-logo.svg in app/public;
   used in landing nav + dashboard header. Alt concepts + lockup in `brand/`.

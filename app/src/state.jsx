@@ -30,7 +30,7 @@ export const DEBT_PLACEHOLDERS = [
   { name: "Amex", bal: 3200, min: 90, rate: 21.9 },
 ];
 
-const blankDebt = () => ({ name: "", bal: "", min: "", rate: "", iffree: false, ifuntil: "" });
+const blankDebt = () => ({ name: "", bal: "", min: "", rate: "", iffree: false, ifuntil: "", dueDay: "" });
 
 export const initialState = {
   payFrequency: "monthly",
@@ -51,6 +51,7 @@ export const initialState = {
   goals: { primary: "", interests: {} }, // primary = section key; interests = { [key]: true }
   debtBaseline: 0,          // peak total debt seen — basis for "cleared so far"
   lastPaymentMonth: "",     // "YYYY-MM" of last logged payment (reminder nudge)
+  payAnchor: "",            // "YYYY-MM-DD" next payday — recurs by payFrequency
 };
 
 const DRAFT_KEY = "dfp_draft_react";
@@ -79,6 +80,7 @@ export function hydrate(flat) {
     goals: { primary: flat.goals?.primary || "", interests: flat.goals?.interests || {} },
     debtBaseline: flat.debtBaseline || 0,
     lastPaymentMonth: flat.lastPaymentMonth || "",
+    payAnchor: flat.payAnchor || "",
     debts: flat.debts && flat.debts.length ? flat.debts : initialState.debts,
     expenses,
   };

@@ -16,6 +16,44 @@ function debtTone(freeMonths) {
 
 const COLOR_BY = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 
+// ---- payment-calendar date helpers ----
+const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const dueDayFromDate = (s) => (s ? new Date(s + "T00:00").getDate() : "");
+function nextDateForDay(day) {
+  // next "YYYY-MM-DD" with this day-of-month (this month if not passed, else next)
+  const t = startOfToday();
+  let dt = clampedDate(t.getFullYear(), t.getMonth(), day);
+  if (dt < t) dt = clampedDate(t.getFullYear(), t.getMonth() + 1, day);
+  return toISO(dt);
+}
+function clampedDate(year, month, day) {
+  const dim = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, dim));
+}
+const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function advancePayday(d, freq) {
+  const n = new Date(d);
+  if (freq === "monthly") n.setMonth(n.getMonth() + 1);
+  else n.setDate(n.getDate() + (freq === "fortnightly" ? 14 : 7));
+  return n;
+}
+function generatePaydays(anchorISO, freq, count) {
+  let d = new Date(anchorISO + "T00:00");
+  const today = startOfToday();
+  let guard = 0;
+  while (d < today && guard < 1000) { d = advancePayday(d, freq); guard++; }
+  const out = [];
+  for (let i = 0; i < count; i++) { out.push(new Date(d)); d = advancePayday(d, freq); }
+  return out;
+}
+function nextDueOnOrAfter(dueDay, from) {
+  let dt = clampedDate(from.getFullYear(), from.getMonth(), dueDay);
+  if (dt < from) dt = clampedDate(from.getFullYear(), from.getMonth() + 1, dueDay);
+  return dt;
+}
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const fmtDay = (d) => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
 export default function Results({ onBack, onPickPlan, embedded, onboarding }) {
   const { state, update } = usePlanner();
   const income = monthlyIncomeOf(state);
@@ -57,6 +95,7 @@ export default function Results({ onBack, onPickPlan, embedded, onboarding }) {
       )}
 
       {!onboarding && <DebtManager />}
+      {!onboarding && <DebtCalendar />}
 
       {/* Top: donut (left) + stats (right) */}
       <div className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -174,7 +213,7 @@ function DebtManager() {
   };
 
   const add = (deb) => {
-    update((s) => ({ ...s, hasDebt: true, debts: [...s.debts, { name: deb.name.trim() || "New debt", bal: deb.bal, min: deb.min, rate: deb.rate, iffree: deb.iffree, ifuntil: deb.ifuntil }] }));
+    update((s) => ({ ...s, hasDebt: true, debts: [...s.debts, { name: deb.name.trim() || "New debt", bal: deb.bal, min: deb.min, rate: deb.rate, iffree: deb.iffree, ifuntil: deb.ifuntil, dueDay: deb.dueDay }] }));
     flashMsg(`Added ${deb.name.trim() || "new debt"} (${fmt(parseFloat(deb.bal) || 0)}).`);
     setMode(null);
   };
@@ -261,16 +300,17 @@ function EditForm({ item, onCancel, onSaved }) {
   const raw = isCar ? state.car : (state.debts[item.index] || {});
   const [d, setD] = useState(
     isCar
-      ? { bal: raw.balance ?? "", min: raw.payment ?? "", rate: raw.rate ?? "" }
-      : { name: raw.name ?? "", bal: raw.bal ?? "", min: raw.min ?? "", rate: raw.rate ?? "", iffree: !!raw.iffree, ifuntil: raw.ifuntil ?? "" }
+      ? { bal: raw.balance ?? "", min: raw.payment ?? "", rate: raw.rate ?? "", due: raw.dueDay ? nextDateForDay(+raw.dueDay) : "" }
+      : { name: raw.name ?? "", bal: raw.bal ?? "", min: raw.min ?? "", rate: raw.rate ?? "", iffree: !!raw.iffree, ifuntil: raw.ifuntil ?? "", due: raw.dueDay ? nextDateForDay(+raw.dueDay) : "" }
   );
   const set = (k, v) => setD((s) => ({ ...s, [k]: v }));
 
   const save = () => {
+    const dueDay = dueDayFromDate(d.due);
     if (isCar) {
-      update((s) => ({ ...s, car: { ...s.car, balance: d.bal, payment: d.min, rate: d.rate } }));
+      update((s) => ({ ...s, car: { ...s.car, balance: d.bal, payment: d.min, rate: d.rate, dueDay } }));
     } else {
-      update((s) => ({ ...s, debts: s.debts.map((x, j) => (j === item.index ? { ...x, name: d.name, bal: d.bal, min: d.min, rate: d.rate, iffree: d.iffree, ifuntil: d.iffree ? d.ifuntil : "" } : x)) }));
+      update((s) => ({ ...s, debts: s.debts.map((x, j) => (j === item.index ? { ...x, name: d.name, bal: d.bal, min: d.min, rate: d.rate, iffree: d.iffree, ifuntil: d.iffree ? d.ifuntil : "", dueDay } : x)) }));
     }
     onSaved(`Updated ${isCar ? "Car Loan" : (d.name || "debt")}.`);
   };
@@ -301,6 +341,13 @@ function EditForm({ item, onCancel, onSaved }) {
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">%</span>
           </span>
         </MiniField>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px]">
+        <span className="inline-flex items-center gap-2 text-muted">Next payment due
+          <input type="date" value={d.due} onChange={(e) => set("due", e.target.value)}
+            className="rounded-[10px] border border-border bg-[#0b0f17] px-2.5 py-2 text-sm text-ink outline-none focus:border-accent" />
+        </span>
       </div>
 
       {!isCar && (
@@ -361,9 +408,10 @@ function PayForm({ items, onCancel, onPay }) {
 }
 
 function AddForm({ onCancel, onAdd }) {
-  const [d, setD] = useState({ name: "", bal: "", min: "", rate: "", iffree: false, ifuntil: "" });
+  const [d, setD] = useState({ name: "", bal: "", min: "", rate: "", iffree: false, ifuntil: "", due: "" });
   const set = (k, v) => setD((s) => ({ ...s, [k]: v }));
   const ok = (parseFloat(d.bal) || 0) > 0;
+  const submit = () => ok && onAdd({ ...d, dueDay: dueDayFromDate(d.due) });
   return (
     <div className="mt-4 rounded-xl border border-border bg-[#0c121d] p-4">
       <h4 className="mb-3 font-semibold">Add a debt</h4>
@@ -383,6 +431,10 @@ function AddForm({ onCancel, onAdd }) {
         </MiniField>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px]">
+        <span className="inline-flex items-center gap-2 text-muted">Next payment due
+          <input type="date" value={d.due} onChange={(e) => set("due", e.target.value)}
+            className="rounded-[10px] border border-border bg-[#0b0f17] px-2.5 py-2 text-sm text-ink outline-none focus:border-accent" />
+        </span>
         <label className="inline-flex cursor-pointer items-center gap-2">
           <input type="checkbox" checked={d.iffree} onChange={(e) => set("iffree", e.target.checked)} className="h-4 w-4 accent-[#2fe6a6]" />
           Interest-free period (0%)
@@ -395,7 +447,7 @@ function AddForm({ onCancel, onAdd }) {
         )}
       </div>
       <div className="mt-3 flex gap-2">
-        <Button onClick={() => ok && onAdd(d)} disabled={!ok} className="px-4 py-2.5 text-sm">Add debt</Button>
+        <Button onClick={submit} disabled={!ok} className="px-4 py-2.5 text-sm">Add debt</Button>
         <Button variant="ghost" onClick={onCancel} className="px-3.5 py-2.5 text-sm">Cancel</Button>
       </div>
     </div>
@@ -457,6 +509,139 @@ function DebtFree({ income, living, available }) {
         <div className="text-center"><div className="text-[22px] font-bold">{fmt(income)}</div><div className="mt-1 text-[12px] uppercase tracking-[.07em] text-muted">Monthly income</div></div>
         <div className="text-center"><div className="text-[22px] font-bold">{fmt(living)}</div><div className="mt-1 text-[12px] uppercase tracking-[.07em] text-muted">Living costs</div></div>
         <div className="text-center"><div className="text-[22px] font-bold text-good">{fmt(available)}</div><div className="mt-1 text-[12px] uppercase tracking-[.07em] text-muted">Spare to save / invest</div></div>
+      </div>
+    </Card>
+  );
+}
+
+// Payment calendar + "what to pay each payday" — uses each debt's due day and
+// the user's payday anchor (recurred by pay frequency).
+function DebtCalendar() {
+  const { state, update } = usePlanner();
+  const freq = state.payFrequency || "monthly";
+  const [monthOffset, setMonthOffset] = useState(0);
+
+  const items = [];
+  state.debts.forEach((dd) => {
+    if ((parseFloat(dd.bal) || 0) > 0 && dd.dueDay) {
+      items.push({ name: (dd.name || "").trim() || "Debt", min: parseFloat(dd.min) || 0, dueDay: +dd.dueDay, freeMonths: dd.iffree ? monthsUntil(dd.ifuntil) : 0 });
+    }
+  });
+  if (state.car.on && (parseFloat(state.car.balance) || 0) > 0 && state.car.dueDay) {
+    items.push({ name: "Car Loan", min: parseFloat(state.car.payment) || 0, dueDay: +state.car.dueDay, freeMonths: 0 });
+  }
+
+  if (!items.length) {
+    return (
+      <Card className="mb-7">
+        <h3 className="text-lg font-bold">Payment calendar</h3>
+        <p className="mt-1 text-[13px] text-muted">Add a <b className="text-ink">next payment due</b> date to your debts (tap ✎ on a debt above) to see when each is due and which payday covers it.</p>
+      </Card>
+    );
+  }
+
+  const anchor = state.payAnchor;
+  const today = startOfToday();
+  const paydays = anchor ? generatePaydays(anchor, freq, 14) : [];
+
+  // What to set aside on each upcoming payday (bills due before the next one).
+  const sched = [];
+  if (paydays.length) {
+    const pre = items.map((it) => ({ it, date: nextDueOnOrAfter(it.dueDay, today) })).filter((x) => x.date < paydays[0]);
+    if (pre.length) sched.push({ label: "Before your next payday", due: pre });
+    for (let i = 0; i < Math.min(3, paydays.length); i++) {
+      const start = paydays[i], end = paydays[i + 1] || advancePayday(paydays[i], freq);
+      const due = items.map((it) => ({ it, date: nextDueOnOrAfter(it.dueDay, start) })).filter((x) => x.date >= start && x.date < end);
+      sched.push({ label: fmtDay(paydays[i]), payday: true, due });
+    }
+  }
+
+  // Month grid (Mon–Sun)
+  const base = new Date(); base.setHours(0, 0, 0, 0); base.setDate(1); base.setMonth(base.getMonth() + monthOffset);
+  const year = base.getFullYear(), month = base.getMonth();
+  const dim = new Date(year, month + 1, 0).getDate();
+  const firstW = (new Date(year, month, 1).getDay() + 6) % 7;
+  const monthLabel = base.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  const paydaySet = new Set(paydays.filter((p) => p.getFullYear() === year && p.getMonth() === month).map((p) => p.getDate()));
+  const dueByDay = {};
+  items.forEach((it) => { const day = Math.min(it.dueDay, dim); (dueByDay[day] ||= []).push(it); });
+  const cells = [...Array(firstW).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
+
+  return (
+    <Card className="mb-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-bold">Payment calendar</h3>
+          <p className="text-[13px] text-muted">When each debt is due — and what to set aside each payday.</p>
+        </div>
+        <label className="flex items-center gap-2 text-[12px] text-muted">
+          Next payday
+          <input type="date" value={anchor || ""} onChange={(e) => update((s) => ({ ...s, payAnchor: e.target.value }))}
+            className="rounded-[10px] border border-border bg-[#0b0f17] px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent" />
+        </label>
+      </div>
+
+      {!anchor ? (
+        <p className="mt-3 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3.5 py-2.5 text-[13px] text-warn">
+          Set your next payday above and we'll tell you which card to pay from each paycheck.
+        </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {sched.map((w, i) => {
+            const total = w.due.reduce((s, x) => s + x.it.min, 0);
+            return (
+              <div key={i} className="rounded-xl border border-border bg-[#0c121d] p-3">
+                <div className="mb-1.5 flex items-baseline justify-between">
+                  <span className="text-[13px] font-bold">{w.payday ? `💷 ${w.label}` : `⏰ ${w.label}`}</span>
+                  <span className={`text-[13px] font-bold ${total > 0 ? "text-warn" : "text-good"}`}>{total > 0 ? `set aside ${fmt(total)}` : "nothing due"}</span>
+                </div>
+                {w.due.length ? w.due.map((x, j) => (
+                  <div key={j} className="flex items-center justify-between text-[12px] text-muted">
+                    <span>{x.it.name} · due {fmtDay(x.date)}</span>
+                    <b className="text-ink tabular-nums">{fmt(x.it.min)}</b>
+                  </div>
+                )) : <div className="text-[12px] text-muted">No payments due before the next payday.</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Month grid */}
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between">
+          <button onClick={() => setMonthOffset((m) => m - 1)} className="rounded-lg border border-border bg-[#0c121d] px-2.5 py-1 text-sm text-ink hover:border-accent"><Chevron dir="left" /></button>
+          <span className="text-[13px] font-bold">{monthLabel}</span>
+          <button onClick={() => setMonthOffset((m) => m + 1)} className="rounded-lg border border-border bg-[#0c121d] px-2.5 py-1 text-sm text-ink hover:border-accent"><Chevron dir="right" /></button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-[.04em] text-muted">
+          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <span key={d}>{d}</span>)}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {cells.map((day, i) => {
+            if (!day) return <span key={i} />;
+            const cellDate = new Date(year, month, day);
+            const isToday = sameDay(cellDate, today);
+            const due = dueByDay[day] || [];
+            const isPay = paydaySet.has(day);
+            return (
+              <div key={i} className={`min-h-[52px] rounded-md border p-1 text-[10px] ${isToday ? "border-accent" : "border-border"} ${isPay ? "bg-[#0f241c]" : "bg-[#0c121d]"}`}>
+                <div className="flex items-center justify-between">
+                  <span className={isToday ? "font-bold text-accent" : "text-muted"}>{day}</span>
+                  {isPay && <span title="Payday">💷</span>}
+                </div>
+                {due.map((it, j) => {
+                  const tone = debtTone(it.freeMonths);
+                  return <div key={j} className="mt-0.5 truncate rounded px-1 text-[9px] font-semibold" style={{ background: tone.bg, color: tone.tx }} title={`${it.name} · ${fmt(it.min)}`}>{it.name}</div>;
+                })}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
+          <span className="inline-flex items-center gap-1.5">💷 Payday</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "#f87171" }} /> Payment due</span>
+        </div>
       </div>
     </Card>
   );
