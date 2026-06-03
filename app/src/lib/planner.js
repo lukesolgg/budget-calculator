@@ -43,3 +43,27 @@ export function nextDueOnOrAfter(dueDay, from) {
 }
 export const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 export const fmtDay = (d) => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
+const DAY_MS = 86400000;
+export const FREQ_LABEL = { weekly: "Weekly", fortnightly: "Fortnightly", monthly: "Monthly" };
+
+// All occurrences of a recurring item within [start, end). Monthly uses the
+// day-of-month; weekly/fortnightly step from `anchor` (usually the payday).
+export function occurrences(freq, day, anchor, start, end) {
+  const out = [];
+  if (freq === "monthly") {
+    let m = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (m < end) {
+      const d = clampedDate(m.getFullYear(), m.getMonth(), day);
+      if (d >= start && d < end) out.push(d);
+      m = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+    }
+  } else {
+    const step = (freq === "fortnightly" ? 14 : 7) * DAY_MS;
+    let d = new Date(anchor); d.setHours(0, 0, 0, 0);
+    while (d.getTime() >= start.getTime()) d = new Date(d.getTime() - step);
+    d = new Date(d.getTime() + step);
+    while (d < end) { if (d >= start) out.push(new Date(d)); d = new Date(d.getTime() + step); }
+  }
+  return out;
+}

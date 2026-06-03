@@ -186,17 +186,25 @@ export function expenseItemsOf(s) {
   return items;
 }
 
-// Bills/essentials that have a due day set — for the payment calendar.
+// Normalise a billDue entry — legacy was a bare day-of-month number.
+export function normBill(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return { freq: "monthly", day: v };
+  return { freq: v.freq || "monthly", day: v.day || 0 };
+}
+
+// Bills/essentials that have a schedule set — for the payment calendar.
+// Returns { key, name, color, amountMonthly, freq, day }.
 export function billDueItemsOf(s) {
   const items = [];
-  if (s.mortgage.on) {
-    const p = Math.max(0, parseFloat(s.mortgage.payment) || 0);
-    if (p > 0 && s.billDue?.mortgage) items.push({ key: "mortgage", name: "Mortgage", color: MORTGAGE_COLOR, amount: p, dueDay: +s.billDue.mortgage });
-  }
-  visibleCategories(s).forEach((c) => {
-    const v = Math.max(0, parseFloat(s.expenses[c.key]) || 0);
-    if (v > 0 && s.billDue?.[c.key]) items.push({ key: c.key, name: c.name, color: c.color, amount: v, dueDay: +s.billDue[c.key] });
-  });
+  const add = (key, name, color, amount) => {
+    const b = normBill(s.billDue?.[key]);
+    if (amount > 0 && b && (b.freq !== "monthly" || b.day)) {
+      items.push({ key, name, color, amountMonthly: amount, freq: b.freq, day: b.day });
+    }
+  };
+  if (s.mortgage.on) add("mortgage", "Mortgage", MORTGAGE_COLOR, Math.max(0, parseFloat(s.mortgage.payment) || 0));
+  visibleCategories(s).forEach((c) => add(c.key, c.name, c.color, Math.max(0, parseFloat(s.expenses[c.key]) || 0)));
   return items;
 }
 
