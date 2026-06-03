@@ -2,57 +2,12 @@ import { useState } from "react";
 import { Button, Card, Chevron, MoneyInput } from "../components/ui.jsx";
 import Donut from "../components/Donut.jsx";
 import {
-  usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf, billDueItemsOf,
+  usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
 } from "../state.jsx";
 import { fmt, monthsToStr, buildPlans, monthsUntil } from "../lib/engine.js";
-
-// Highlight colour for a debt: green = interest-free with time, orange =
-// interest-free running out, red = interest already accruing (no 0% period).
-function debtTone(freeMonths) {
-  if (freeMonths > 6) return { bd: "#1f5c3a", bg: "#0c1f16", tx: "#3ad07f", label: `0% · ${freeMonths} mo left` };
-  if (freeMonths > 0) return { bd: "#5a3d12", bg: "#1c1407", tx: "#f0b86a", label: `0% · ${freeMonths} mo left` };
-  return { bd: "#5a1f1f", bg: "#1a0f0f", tx: "#f87171", label: "Accruing interest" };
-}
+import { debtTone, dueDayFromDate, nextDateForDay } from "../lib/planner.js";
 
 const COLOR_BY = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
-
-// ---- payment-calendar date helpers ----
-const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
-const dueDayFromDate = (s) => (s ? new Date(s + "T00:00").getDate() : "");
-function nextDateForDay(day) {
-  // next "YYYY-MM-DD" with this day-of-month (this month if not passed, else next)
-  const t = startOfToday();
-  let dt = clampedDate(t.getFullYear(), t.getMonth(), day);
-  if (dt < t) dt = clampedDate(t.getFullYear(), t.getMonth() + 1, day);
-  return toISO(dt);
-}
-function clampedDate(year, month, day) {
-  const dim = new Date(year, month + 1, 0).getDate();
-  return new Date(year, month, Math.min(day, dim));
-}
-const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-function advancePayday(d, freq) {
-  const n = new Date(d);
-  if (freq === "monthly") n.setMonth(n.getMonth() + 1);
-  else n.setDate(n.getDate() + (freq === "fortnightly" ? 14 : 7));
-  return n;
-}
-function generatePaydays(anchorISO, freq, count) {
-  let d = new Date(anchorISO + "T00:00");
-  const today = startOfToday();
-  let guard = 0;
-  while (d < today && guard < 1000) { d = advancePayday(d, freq); guard++; }
-  const out = [];
-  for (let i = 0; i < count; i++) { out.push(new Date(d)); d = advancePayday(d, freq); }
-  return out;
-}
-function nextDueOnOrAfter(dueDay, from) {
-  let dt = clampedDate(from.getFullYear(), from.getMonth(), dueDay);
-  if (dt < from) dt = clampedDate(from.getFullYear(), from.getMonth() + 1, dueDay);
-  return dt;
-}
-const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-const fmtDay = (d) => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 
 export default function Results({ onBack, onPickPlan, embedded, onboarding }) {
   const { state, update } = usePlanner();
@@ -94,59 +49,52 @@ export default function Results({ onBack, onPickPlan, embedded, onboarding }) {
         </header>
       )}
 
-      {!onboarding && <DebtManager />}
-      {!onboarding && <DebtCalendar />}
+      {embedded && !onboarding ? (
+        /* ===== Debt tab — everything in one frame ===== */
+        noDebt ? (
+          <DebtFree income={income} living={living} available={available} />
+        ) : (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_minmax(0,340px)] lg:items-start">
+            <DebtManager />
+            <PlanPicker plans={plans} selectedPlan={state.selectedPlan} onPick={pick} available={available} minTotal={minTotal} surplus={surplus} />
+          </div>
+        )
+      ) : (
+        /* ===== Onboarding / standalone — budget context + full plan cards ===== */
+        <>
+          <div className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card className="flex flex-col items-center justify-center">
+              <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="budget" centerTop={fmt(income)} />
+            </Card>
+            <Card className="flex flex-col">
+              <h3 className="mb-3 font-bold">Your money at a glance</h3>
+              <StatRow k="Income" v={fmt(income)} />
+              <StatRow k="Expenses" v={fmt(totalExpenses)} />
+              <StatRow k="Leftover" v={fmt(leftover)} tone={leftover >= 0 ? "good" : "bad"} last />
+            </Card>
+          </div>
 
-      {/* Top: donut (left) + stats (right) */}
-      <div className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className="flex flex-col items-center justify-center">
-          <Donut items={expItems} total={Math.max(income, totalExpenses)} idPrefix="budget" centerTop={fmt(income)} />
-        </Card>
-
-        <Card className="flex flex-col">
-          <h3 className="mb-3 font-bold">Your money at a glance</h3>
-          <StatRow k="Income" v={fmt(income)} />
-          <StatRow k="Expenses" v={fmt(totalExpenses)} />
-          <StatRow k="Leftover" v={fmt(leftover)} tone={leftover >= 0 ? "good" : "bad"} last />
-
-          {!noDebt && (
+          {noDebt ? (
+            <DebtFree income={income} living={living} available={available} />
+          ) : (
             <>
-              <div className="mt-4 mb-2 text-[12px] font-semibold uppercase tracking-[.06em] text-muted">Debt-free in</div>
-              {plans.map((x) => (
-                <div key={x.def.key} className="flex items-center justify-between border-b border-border py-2.5 last:border-0">
-                  <span className="flex items-center gap-2.5 text-sm">
-                    <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: COLOR_BY[x.def.cls] }} />
-                    {x.def.title}
-                  </span>
-                  <span className="font-bold tabular-nums" style={{ color: COLOR_BY[x.def.cls] }}>{monthsToStr(x.sim.months)}</span>
-                </div>
-              ))}
+              <div className="mb-5 text-center">
+                <h2 className="text-[26px] font-bold tracking-tight">Choose Your Debt Freedom Strategy</h2>
+                <p className="text-muted">Three ways to clear your debt — pick the pace that fits your life.</p>
+              </div>
+              {available < minTotal && (
+                <Note>⚠️ Your minimum payments ({fmt(minTotal)}) are higher than the money left after your other expenses ({fmt(available)}). Trim some expenses, or these timelines assume you can still cover the minimums.</Note>
+              )}
+              {available >= minTotal && surplus <= 0 && (
+                <Note>💡 After expenses and minimum payments there's no spare cash to accelerate with, so all three plans pay just the minimums.</Note>
+              )}
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                {plans.map((x) => (
+                  <PlanCard key={x.def.key} x={x} selected={state.selectedPlan === x.def.key} onPick={() => pick(x.def.key)} />
+                ))}
+              </div>
             </>
           )}
-        </Card>
-      </div>
-
-      {noDebt ? (
-        <DebtFree income={income} living={living} available={available} />
-      ) : (
-        <>
-          <div className="mb-5 text-center">
-            <h2 className="text-[26px] font-bold tracking-tight">Choose Your Debt Freedom Strategy</h2>
-            <p className="text-muted">Three ways to clear your debt — pick the pace that fits your life.</p>
-          </div>
-
-          {available < minTotal && (
-            <Note>⚠️ Your minimum payments ({fmt(minTotal)}) are higher than the money left after your other expenses ({fmt(available)}). Trim some expenses, or these timelines assume you can still cover the minimums.</Note>
-          )}
-          {available >= minTotal && surplus <= 0 && (
-            <Note>💡 After expenses and minimum payments there's no spare cash to accelerate with, so all three plans pay just the minimums.</Note>
-          )}
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            {plans.map((x) => (
-              <PlanCard key={x.def.key} x={x} selected={state.selectedPlan === x.def.key} onPick={() => pick(x.def.key)} />
-            ))}
-          </div>
         </>
       )}
     </div>
@@ -165,6 +113,42 @@ function StatRow({ k, v, tone, last }) {
 
 function Note({ children }) {
   return <div className="mb-[18px] rounded-[10px] border border-[#5a3d12] bg-[#1c1407] px-3.5 py-3 text-[13px] leading-relaxed text-warn">{children}</div>;
+}
+
+// Compact stacked plan picker for the Debt tab's right column.
+function PlanPicker({ plans, selectedPlan, onPick, available, minTotal, surplus }) {
+  return (
+    <div className="rounded-2xl border border-border bg-gradient-to-b from-panel to-panel2 p-4">
+      <h3 className="font-bold">Your payoff pace</h3>
+      <p className="mb-3 text-[12px] text-muted">Pick how hard to push — tap one to see the full plan.</p>
+      {available < minTotal && (
+        <p className="mb-3 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3 py-2 text-[12px] text-warn">Minimums ({fmt(minTotal)}) exceed what's left after expenses ({fmt(available)}).</p>
+      )}
+      {available >= minTotal && surplus <= 0 && (
+        <p className="mb-3 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3 py-2 text-[12px] text-warn">No spare cash to accelerate — all plans pay the minimums.</p>
+      )}
+      <div className="flex flex-col gap-2.5">
+        {plans.map((x) => {
+          const acc = COLOR_BY[x.def.cls];
+          const sel = selectedPlan === x.def.key;
+          return (
+            <button key={x.def.key} onClick={() => onPick(x.def.key)}
+              style={sel ? { borderColor: acc, boxShadow: `0 0 0 1px ${acc}` } : undefined}
+              className={`flex items-center justify-between gap-3 rounded-xl border bg-[#0c121d] px-3.5 py-3 text-left transition hover:brightness-110 ${sel ? "border-transparent" : "border-border"}`}>
+              <span className="min-w-0">
+                <span className="block truncate text-[14px] font-bold">{x.def.title}</span>
+                <span className="block text-[11px] text-muted">{x.def.badge} · {fmt(x.monthly)}/mo</span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block text-[9px] uppercase tracking-[.05em] text-muted">Debt-free</span>
+                <span className="block text-[15px] font-extrabold tabular-nums" style={{ color: acc }}>{monthsToStr(x.sim.months)}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // Log a payment / add / edit a debt — updates balances without re-onboarding.
@@ -265,17 +249,17 @@ function DebtManager() {
       )}
 
       {items.length > 0 ? (
-        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="mt-4 flex flex-col gap-1.5">
           {items.map((it) => {
             const tone = debtTone(it.freeMonths);
             return (
-              <div key={it.id} className="flex items-center justify-between gap-2 rounded-xl border bg-[#0c121d] px-3.5 py-2.5" style={{ borderColor: tone.bd, borderLeftWidth: 4 }}>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-bold">{it.name}</span>
-                  <span className="text-[11px] font-semibold" style={{ color: tone.tx }}>{tone.label}{it.freeMonths === 0 && it.rate > 0 ? ` · ${it.rate}%` : ""}</span>
+              <div key={it.id} className="flex items-center justify-between gap-2 rounded-lg border bg-[#0c121d] px-3 py-2" style={{ borderColor: tone.bd, borderLeftWidth: 4 }}>
+                <span className="flex min-w-0 items-baseline gap-2">
+                  <span className="truncate text-sm font-bold">{it.name}</span>
+                  <span className="shrink-0 text-[10px] font-semibold" style={{ color: tone.tx }}>{it.freeMonths > 0 ? `0% · ${it.freeMonths}mo` : it.rate > 0 ? `${it.rate}%` : ""}</span>
                 </span>
-                <span className="flex items-center gap-2.5">
-                  <span className="font-bold tabular-nums">{fmt(it.bal)}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-sm font-bold tabular-nums">{fmt(it.bal)}</span>
                   <button onClick={() => openEdit(it)} className="text-muted transition hover:text-accent" title="Edit" aria-label={`Edit ${it.name}`}>✎</button>
                 </span>
               </div>
@@ -514,139 +498,3 @@ function DebtFree({ income, living, available }) {
   );
 }
 
-// Payment calendar + "what to pay each payday" — uses each debt's due day and
-// the user's payday anchor (recurred by pay frequency).
-function DebtCalendar() {
-  const { state, update } = usePlanner();
-  const freq = state.payFrequency || "monthly";
-  const [monthOffset, setMonthOffset] = useState(0);
-
-  const items = [];
-  state.debts.forEach((dd) => {
-    if ((parseFloat(dd.bal) || 0) > 0 && dd.dueDay) {
-      const tone = debtTone(dd.iffree ? monthsUntil(dd.ifuntil) : 0);
-      items.push({ name: (dd.name || "").trim() || "Debt", amount: parseFloat(dd.min) || 0, dueDay: +dd.dueDay, kind: "debt", tx: tone.tx, bg: tone.bg });
-    }
-  });
-  if (state.car.on && (parseFloat(state.car.balance) || 0) > 0 && state.car.dueDay) {
-    const tone = debtTone(0);
-    items.push({ name: "Car Loan", amount: parseFloat(state.car.payment) || 0, dueDay: +state.car.dueDay, kind: "debt", tx: tone.tx, bg: tone.bg });
-  }
-  billDueItemsOf(state).forEach((b) => {
-    items.push({ name: b.name, amount: b.amount, dueDay: b.dueDay, kind: "bill", tx: b.color, bg: "#0c121d" });
-  });
-
-  if (!items.length) {
-    return (
-      <Card className="mb-7">
-        <h3 className="text-lg font-bold">Payment calendar</h3>
-        <p className="mt-1 text-[13px] text-muted">Add a <b className="text-ink">due date</b> to your debts (tap ✎ above) or set a <b className="text-ink">Due</b> day on your bills in the Budget tab, and we'll show when each is due and which payday covers it.</p>
-      </Card>
-    );
-  }
-
-  const anchor = state.payAnchor;
-  const today = startOfToday();
-  const paydays = anchor ? generatePaydays(anchor, freq, 14) : [];
-
-  // What to set aside on each upcoming payday (bills due before the next one).
-  const sched = [];
-  if (paydays.length) {
-    const pre = items.map((it) => ({ it, date: nextDueOnOrAfter(it.dueDay, today) })).filter((x) => x.date < paydays[0]);
-    if (pre.length) sched.push({ label: "Before your next payday", due: pre });
-    for (let i = 0; i < Math.min(3, paydays.length); i++) {
-      const start = paydays[i], end = paydays[i + 1] || advancePayday(paydays[i], freq);
-      const due = items.map((it) => ({ it, date: nextDueOnOrAfter(it.dueDay, start) })).filter((x) => x.date >= start && x.date < end);
-      sched.push({ label: fmtDay(paydays[i]), payday: true, due });
-    }
-  }
-
-  // Month grid (Mon–Sun)
-  const base = new Date(); base.setHours(0, 0, 0, 0); base.setDate(1); base.setMonth(base.getMonth() + monthOffset);
-  const year = base.getFullYear(), month = base.getMonth();
-  const dim = new Date(year, month + 1, 0).getDate();
-  const firstW = (new Date(year, month, 1).getDay() + 6) % 7;
-  const monthLabel = base.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  const paydaySet = new Set(paydays.filter((p) => p.getFullYear() === year && p.getMonth() === month).map((p) => p.getDate()));
-  const dueByDay = {};
-  items.forEach((it) => { const day = Math.min(it.dueDay, dim); (dueByDay[day] ||= []).push(it); });
-  const cells = [...Array(firstW).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
-
-  return (
-    <Card className="mb-7">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold">Payment calendar</h3>
-          <p className="text-[13px] text-muted">When your bills &amp; debts are due — and what to set aside each payday.</p>
-        </div>
-        <label className="flex items-center gap-2 text-[12px] text-muted">
-          Next payday
-          <input type="date" value={anchor || ""} onChange={(e) => update((s) => ({ ...s, payAnchor: e.target.value }))}
-            className="rounded-[10px] border border-border bg-[#0b0f17] px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent" />
-        </label>
-      </div>
-
-      {!anchor ? (
-        <p className="mt-3 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3.5 py-2.5 text-[13px] text-warn">
-          Set your next payday above and we'll tell you which card to pay from each paycheck.
-        </p>
-      ) : (
-        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          {sched.map((w, i) => {
-            const total = w.due.reduce((s, x) => s + x.it.amount, 0);
-            return (
-              <div key={i} className="rounded-xl border border-border bg-[#0c121d] p-3">
-                <div className="mb-1.5 flex items-baseline justify-between">
-                  <span className="text-[13px] font-bold">{w.payday ? `💷 ${w.label}` : `⏰ ${w.label}`}</span>
-                  <span className={`text-[13px] font-bold ${total > 0 ? "text-warn" : "text-good"}`}>{total > 0 ? `set aside ${fmt(total)}` : "nothing due"}</span>
-                </div>
-                {w.due.length ? w.due.map((x, j) => (
-                  <div key={j} className="flex items-center justify-between text-[12px] text-muted">
-                    <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: x.it.tx }} />{x.it.name} · due {fmtDay(x.date)}</span>
-                    <b className="text-ink tabular-nums">{fmt(x.it.amount)}</b>
-                  </div>
-                )) : <div className="text-[12px] text-muted">Nothing due before the next payday.</div>}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Month grid */}
-      <div className="mt-5">
-        <div className="mb-2 flex items-center justify-between">
-          <button onClick={() => setMonthOffset((m) => m - 1)} className="rounded-lg border border-border bg-[#0c121d] px-2.5 py-1 text-sm text-ink hover:border-accent"><Chevron dir="left" /></button>
-          <span className="text-[13px] font-bold">{monthLabel}</span>
-          <button onClick={() => setMonthOffset((m) => m + 1)} className="rounded-lg border border-border bg-[#0c121d] px-2.5 py-1 text-sm text-ink hover:border-accent"><Chevron dir="right" /></button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-[.04em] text-muted">
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <span key={d}>{d}</span>)}
-        </div>
-        <div className="mt-1 grid grid-cols-7 gap-1">
-          {cells.map((day, i) => {
-            if (!day) return <span key={i} />;
-            const cellDate = new Date(year, month, day);
-            const isToday = sameDay(cellDate, today);
-            const due = dueByDay[day] || [];
-            const isPay = paydaySet.has(day);
-            return (
-              <div key={i} className={`min-h-[52px] rounded-md border p-1 text-[10px] ${isToday ? "border-accent" : "border-border"} ${isPay ? "bg-[#0f241c]" : "bg-[#0c121d]"}`}>
-                <div className="flex items-center justify-between">
-                  <span className={isToday ? "font-bold text-accent" : "text-muted"}>{day}</span>
-                  {isPay && <span title="Payday">💷</span>}
-                </div>
-                {due.map((it, j) => (
-                  <div key={j} className="mt-0.5 truncate rounded px-1 text-[9px] font-semibold" style={{ background: it.bg, color: it.tx }} title={`${it.name} · ${fmt(it.amount)}`}>{it.name}</div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
-          <span className="inline-flex items-center gap-1.5">💷 Payday</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "#f87171" }} /> Payment due</span>
-        </div>
-      </div>
-    </Card>
-  );
-}

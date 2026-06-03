@@ -73,7 +73,7 @@ export default function Budget({ onEditDetails }) {
                 due={billDue[c.key]} onDue={(v) => setBillDue(c.key, v)} />
             );
           })}
-          {editing && <p className="mt-2 text-[11px] text-muted">💡 Set a <b className="text-ink">Due</b> day (1–31) to show bills on your payment calendar in the Debt tab.</p>}
+          {editing && <p className="mt-2 text-[11px] text-muted">💡 Set a <b className="text-ink">Due</b> day (1–31) to show bills on your payment calendar in the Planner tab.</p>}
 
           <div className="mt-4 border-t border-border pt-3">
             <TotalRow k="Income" monthly={m.income} tone="ink" />

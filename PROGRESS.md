@@ -64,6 +64,13 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Planner tab + Debt tab one-frame redesign: calendar/payday scheduler moved out
+  of the Debt tab into its own "Planner" sidebar tab (screens/Planner.jsx); shared
+  helpers in lib/planner.js (debtTone + date helpers). Debt tab is now a single
+  2-col frame: left = DebtManager (debts as a compact vertical list), right =
+  compact PlanPicker (3 stacked plan cards, tap to open Detail); donut + money-
+  at-a-glance removed from the Debt tab (onboarding plan screen keeps them).
+- Git author corrected to lukesolgg@gmail.com / lukesolgg.
 - Git author now lukeknightdev@gmail.com / lukesolgg (repo git config) so commits
   land on the owner's GitHub. (Earlier commits used luke@local.)
 - Payment calendar now covers BILLS + debts: per-category due day (billDue map,

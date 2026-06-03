@@ -14,6 +14,7 @@ import Results from "./Results.jsx";
 import Detail from "./Detail.jsx";
 import Settings from "./Settings.jsx";
 import Budget from "./Budget.jsx";
+import Planner from "./Planner.jsx";
 
 const LIVE = new Set(["debt", "savings", "career"]);
 const TONE = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
@@ -67,6 +68,7 @@ export default function Dashboard({ onEdit, onLogout }) {
           <nav className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
             <TabBtn label="Overview" emoji="🏠" active={tab === "overview"} onClick={() => go("overview")} />
             <TabBtn label="Budget" emoji="🧮" active={tab === "budget"} onClick={() => go("budget")} />
+            <TabBtn label="Planner" emoji="🗓️" active={tab === "planner"} onClick={() => go("planner")} />
             {ordered.map((key) => {
               const sec = sectionByKey(key);
               if (!sec) return null;
@@ -87,13 +89,14 @@ export default function Dashboard({ onEdit, onLogout }) {
         <main className="min-w-0 flex-1">
           {tab === "overview" && <Overview onOpenTab={go} onEdit={onEdit} />}
           {tab === "budget" && <Budget onEditDetails={onEdit} />}
+          {tab === "planner" && <Planner />}
           {tab === "debt" && (detailPlan
             ? <Detail planKey={detailPlan} onBack={() => setDetailPlan(null)} />
             : <Results embedded onPickPlan={(k) => { setDetailPlan(k); window.scrollTo({ top: 0, behavior: "smooth" }); }} />)}
           {tab === "savings" && <Savings embedded />}
           {tab === "career" && <Career embedded />}
           {tab === "settings" && <Settings onEdit={onEdit} onLogout={onLogout} />}
-          {!["overview", "budget", "debt", "savings", "career", "settings"].includes(tab) && <ComingSoon section={sectionByKey(tab)} onBack={() => go("overview")} />}
+          {!["overview", "budget", "planner", "debt", "savings", "career", "settings"].includes(tab) && <ComingSoon section={sectionByKey(tab)} onBack={() => go("overview")} />}
         </main>
       </div>
     </div>
