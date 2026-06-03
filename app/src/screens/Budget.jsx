@@ -18,6 +18,13 @@ export default function Budget({ onEditDetails }) {
 
   const cats = visibleCategories(state);
   const setExpense = (key, v) => update((s) => ({ ...s, expenses: { ...s.expenses, [key]: v } }));
+  const setBillDue = (key, day) => update((s) => {
+    const bd = { ...(s.billDue || {}) };
+    const n = parseInt(day, 10);
+    if (!n) delete bd[key]; else bd[key] = Math.max(1, Math.min(31, n));
+    return { ...s, billDue: bd };
+  });
+  const billDue = state.billDue || {};
 
   const expItems = expenseItemsOf(state);
   const breakdown = [...expItems];
@@ -44,14 +51,16 @@ export default function Budget({ onEditDetails }) {
           </div>
 
           {/* column headers */}
-          <div className="grid grid-cols-[1fr_120px_90px] items-center gap-2 border-b border-border pb-2 text-[10px] font-semibold uppercase tracking-[.06em] text-muted">
+          <div className="grid grid-cols-[1fr_96px_60px_64px] items-center gap-2 border-b border-border pb-2 text-[10px] font-semibold uppercase tracking-[.06em] text-muted">
             <span>Category</span>
             <span className="text-right">Monthly</span>
             <span className="text-right">Weekly</span>
+            <span className="text-right">Due</span>
           </div>
 
           {state.mortgage.on && (
-            <Row color="#4cb8f0" name="Mortgage" value={mortgage} editing={false}>
+            <Row color="#4cb8f0" name="Mortgage" value={mortgage} editing={editing} amountLocked
+              due={billDue.mortgage} onDue={(v) => setBillDue("mortgage", v)}>
               <span className="text-[11px] text-muted">set in <button onClick={onEditDetails} className="text-accent hover:underline">details</button></span>
             </Row>
           )}
@@ -60,9 +69,11 @@ export default function Budget({ onEditDetails }) {
             const val = parseFloat(state.expenses[c.key]) || 0;
             return (
               <Row key={c.key} color={c.color} name={c.name} value={val} editing={editing}
-                input={<MoneyInput value={state.expenses[c.key] ?? ""} onChange={(v) => setExpense(c.key, v)} placeholder={EXPENSE_PLACEHOLDERS[c.key]} />} />
+                input={<MoneyInput value={state.expenses[c.key] ?? ""} onChange={(v) => setExpense(c.key, v)} placeholder={EXPENSE_PLACEHOLDERS[c.key]} />}
+                due={billDue[c.key]} onDue={(v) => setBillDue(c.key, v)} />
             );
           })}
+          {editing && <p className="mt-2 text-[11px] text-muted">💡 Set a <b className="text-ink">Due</b> day (1–31) to show bills on your payment calendar in the Debt tab.</p>}
 
           <div className="mt-4 border-t border-border pt-3">
             <TotalRow k="Income" monthly={m.income} tone="ink" />
@@ -94,17 +105,27 @@ export default function Budget({ onEditDetails }) {
   );
 }
 
-function Row({ color, name, value, editing, input, children }) {
+function ord(n) {
+  if (!n) return "—";
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function Row({ color, name, value, editing, input, amountLocked, due, onDue, children }) {
   return (
-    <div className="grid grid-cols-[1fr_120px_90px] items-center gap-2 border-b border-border/60 py-2.5 last:border-0">
+    <div className="grid grid-cols-[1fr_96px_60px_64px] items-center gap-2 border-b border-border/60 py-2.5 last:border-0">
       <span className="flex items-center gap-2.5 text-sm">
         <span className="h-3 w-3 shrink-0 rounded" style={{ background: color }} />
-        <span>{name}{children && <span className="ml-2">{children}</span>}</span>
+        <span className="min-w-0 truncate">{name}{children && <span className="ml-2">{children}</span>}</span>
       </span>
-      {editing && input
+      {editing && input && !amountLocked
         ? input
         : <span className="text-right font-semibold tabular-nums">{fmt(value)}</span>}
       <span className="text-right text-[13px] tabular-nums text-muted">{wk(value)}</span>
+      {editing && onDue
+        ? <input type="number" min="1" max="31" value={due || ""} onChange={(e) => onDue(e.target.value)} placeholder="–"
+            className="w-full rounded-[8px] border border-border bg-[#0b0f17] px-2 py-1.5 text-right text-[13px] text-ink outline-none focus:border-accent" />
+        : <span className="text-right text-[12px] tabular-nums text-muted">{ord(due)}</span>}
     </div>
   );
 }
@@ -112,10 +133,11 @@ function Row({ color, name, value, editing, input, children }) {
 function TotalRow({ k, monthly, tone, big }) {
   const c = tone === "good" ? "text-good" : tone === "bad" ? "text-bad" : "text-ink";
   return (
-    <div className="grid grid-cols-[1fr_120px_90px] items-baseline gap-2 py-1">
+    <div className="grid grid-cols-[1fr_96px_60px_64px] items-baseline gap-2 py-1">
       <span className="text-sm text-muted">{k}</span>
       <span className={`text-right tabular-nums ${big ? "text-[17px] font-extrabold" : "font-bold"} ${c}`}>{fmt(monthly)}</span>
       <span className={`text-right text-[12px] tabular-nums ${c} opacity-80`}>{wk(monthly)}</span>
+      <span />
     </div>
   );
 }

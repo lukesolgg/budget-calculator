@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Card, Chevron, MoneyInput } from "../components/ui.jsx";
 import Donut from "../components/Donut.jsx";
 import {
-  usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
+  usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf, billDueItemsOf,
 } from "../state.jsx";
 import { fmt, monthsToStr, buildPlans, monthsUntil } from "../lib/engine.js";
 
@@ -524,18 +524,23 @@ function DebtCalendar() {
   const items = [];
   state.debts.forEach((dd) => {
     if ((parseFloat(dd.bal) || 0) > 0 && dd.dueDay) {
-      items.push({ name: (dd.name || "").trim() || "Debt", min: parseFloat(dd.min) || 0, dueDay: +dd.dueDay, freeMonths: dd.iffree ? monthsUntil(dd.ifuntil) : 0 });
+      const tone = debtTone(dd.iffree ? monthsUntil(dd.ifuntil) : 0);
+      items.push({ name: (dd.name || "").trim() || "Debt", amount: parseFloat(dd.min) || 0, dueDay: +dd.dueDay, kind: "debt", tx: tone.tx, bg: tone.bg });
     }
   });
   if (state.car.on && (parseFloat(state.car.balance) || 0) > 0 && state.car.dueDay) {
-    items.push({ name: "Car Loan", min: parseFloat(state.car.payment) || 0, dueDay: +state.car.dueDay, freeMonths: 0 });
+    const tone = debtTone(0);
+    items.push({ name: "Car Loan", amount: parseFloat(state.car.payment) || 0, dueDay: +state.car.dueDay, kind: "debt", tx: tone.tx, bg: tone.bg });
   }
+  billDueItemsOf(state).forEach((b) => {
+    items.push({ name: b.name, amount: b.amount, dueDay: b.dueDay, kind: "bill", tx: b.color, bg: "#0c121d" });
+  });
 
   if (!items.length) {
     return (
       <Card className="mb-7">
         <h3 className="text-lg font-bold">Payment calendar</h3>
-        <p className="mt-1 text-[13px] text-muted">Add a <b className="text-ink">next payment due</b> date to your debts (tap ✎ on a debt above) to see when each is due and which payday covers it.</p>
+        <p className="mt-1 text-[13px] text-muted">Add a <b className="text-ink">due date</b> to your debts (tap ✎ above) or set a <b className="text-ink">Due</b> day on your bills in the Budget tab, and we'll show when each is due and which payday covers it.</p>
       </Card>
     );
   }
@@ -572,7 +577,7 @@ function DebtCalendar() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold">Payment calendar</h3>
-          <p className="text-[13px] text-muted">When each debt is due — and what to set aside each payday.</p>
+          <p className="text-[13px] text-muted">When your bills &amp; debts are due — and what to set aside each payday.</p>
         </div>
         <label className="flex items-center gap-2 text-[12px] text-muted">
           Next payday
@@ -588,7 +593,7 @@ function DebtCalendar() {
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {sched.map((w, i) => {
-            const total = w.due.reduce((s, x) => s + x.it.min, 0);
+            const total = w.due.reduce((s, x) => s + x.it.amount, 0);
             return (
               <div key={i} className="rounded-xl border border-border bg-[#0c121d] p-3">
                 <div className="mb-1.5 flex items-baseline justify-between">
@@ -597,10 +602,10 @@ function DebtCalendar() {
                 </div>
                 {w.due.length ? w.due.map((x, j) => (
                   <div key={j} className="flex items-center justify-between text-[12px] text-muted">
-                    <span>{x.it.name} · due {fmtDay(x.date)}</span>
-                    <b className="text-ink tabular-nums">{fmt(x.it.min)}</b>
+                    <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: x.it.tx }} />{x.it.name} · due {fmtDay(x.date)}</span>
+                    <b className="text-ink tabular-nums">{fmt(x.it.amount)}</b>
                   </div>
-                )) : <div className="text-[12px] text-muted">No payments due before the next payday.</div>}
+                )) : <div className="text-[12px] text-muted">Nothing due before the next payday.</div>}
               </div>
             );
           })}
@@ -630,10 +635,9 @@ function DebtCalendar() {
                   <span className={isToday ? "font-bold text-accent" : "text-muted"}>{day}</span>
                   {isPay && <span title="Payday">💷</span>}
                 </div>
-                {due.map((it, j) => {
-                  const tone = debtTone(it.freeMonths);
-                  return <div key={j} className="mt-0.5 truncate rounded px-1 text-[9px] font-semibold" style={{ background: tone.bg, color: tone.tx }} title={`${it.name} · ${fmt(it.min)}`}>{it.name}</div>;
-                })}
+                {due.map((it, j) => (
+                  <div key={j} className="mt-0.5 truncate rounded px-1 text-[9px] font-semibold" style={{ background: it.bg, color: it.tx }} title={`${it.name} · ${fmt(it.amount)}`}>{it.name}</div>
+                ))}
               </div>
             );
           })}

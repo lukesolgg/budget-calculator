@@ -64,6 +64,12 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Git author now lukeknightdev@gmail.com / lukesolgg (repo git config) so commits
+  land on the owner's GitHub. (Earlier commits used luke@local.)
+- Payment calendar now covers BILLS + debts: per-category due day (billDue map,
+  schema 9) edited in the Budget tab's new "Due" column; billDueItemsOf selector;
+  calendar + "set aside each payday" include bills (category colour) alongside
+  debts. Heading now "bills & debts".
 - Payment calendar on the Debt tab (Results.jsx → DebtCalendar): each debt now
   has a due date (date picker in add/edit → stored as dueDay), plus a payday
   anchor (state.payAnchor, schema 8) entered as the next payday and recurred by

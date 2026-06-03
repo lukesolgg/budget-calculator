@@ -13,7 +13,7 @@
 // rates) lives in src/data/* and NEVER touches a user profile.
 // ===========================================================================
 
-export const CURRENT_SCHEMA = 8;
+export const CURRENT_SCHEMA = 9;
 
 // Flat in-memory state -> versioned namespaced blob for storage.
 export function serialize(s) {
@@ -21,7 +21,7 @@ export function serialize(s) {
     schemaVersion: CURRENT_SCHEMA,
     profile: { age: s.age, payFrequency: s.payFrequency, income: s.income, jobSoc: s.jobSoc, payAnchor: s.payAnchor },
     debts: { hasDebt: s.hasDebt, list: s.debts, mortgage: s.mortgage, car: s.car, baseline: s.debtBaseline, lastPayment: s.lastPaymentMonth },
-    budget: { expenses: s.expenses, pets: s.pets },
+    budget: { expenses: s.expenses, pets: s.pets, billDue: s.billDue },
     plan: { selected: s.selectedPlan, alloc: s.alloc, locked: s.allocLocked },
     goals: { primary: s.goals?.primary || "", interests: s.goals?.interests || {} },
   };
@@ -39,7 +39,7 @@ export function deserialize(raw) {
     age: p.age, payFrequency: p.payFrequency, income: p.income, jobSoc: p.jobSoc, payAnchor: p.payAnchor,
     hasDebt: d.hasDebt, debts: d.list, mortgage: d.mortgage, car: d.car,
     debtBaseline: d.baseline, lastPaymentMonth: d.lastPayment,
-    expenses: b.expenses, pets: b.pets,
+    expenses: b.expenses, pets: b.pets, billDue: b.billDue,
     selectedPlan: pl.selected, alloc: pl.alloc, allocLocked: pl.locked,
     goals: raw.goals,
   });

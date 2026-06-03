@@ -43,6 +43,7 @@ export const initialState = {
   car: { owns: false, on: false, balance: "", payment: "", rate: "" },
   pets: { on: false },
   expenses: {}, // key -> string value
+  billDue: {},  // category key (or "mortgage") -> day-of-month the bill is due
   // Debt-plan choices (remembered):
   selectedPlan: "",        // "" | balanced | accelerated | avalanche
   alloc: null,             // locked { fun, savings, extra } split, or null
@@ -78,6 +79,7 @@ export function hydrate(flat) {
     car,
     pets,
     goals: { primary: flat.goals?.primary || "", interests: flat.goals?.interests || {} },
+    billDue: flat.billDue || {},
     debtBaseline: flat.debtBaseline || 0,
     lastPaymentMonth: flat.lastPaymentMonth || "",
     payAnchor: flat.payAnchor || "",
@@ -181,6 +183,20 @@ export function expenseItemsOf(s) {
     const p = Math.max(0, parseFloat(s.mortgage.payment) || 0);
     if (p > 0) items.unshift({ key: "mortgage", name: "Mortgage", color: MORTGAGE_COLOR, value: p });
   }
+  return items;
+}
+
+// Bills/essentials that have a due day set — for the payment calendar.
+export function billDueItemsOf(s) {
+  const items = [];
+  if (s.mortgage.on) {
+    const p = Math.max(0, parseFloat(s.mortgage.payment) || 0);
+    if (p > 0 && s.billDue?.mortgage) items.push({ key: "mortgage", name: "Mortgage", color: MORTGAGE_COLOR, amount: p, dueDay: +s.billDue.mortgage });
+  }
+  visibleCategories(s).forEach((c) => {
+    const v = Math.max(0, parseFloat(s.expenses[c.key]) || 0);
+    if (v > 0 && s.billDue?.[c.key]) items.push({ key: c.key, name: c.name, color: c.color, amount: v, dueDay: +s.billDue[c.key] });
+  });
   return items;
 }
 
