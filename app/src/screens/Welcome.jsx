@@ -1,22 +1,13 @@
 import { useState } from "react";
 import { Button } from "../components/ui.jsx";
-
-function LogoMark() {
-  return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-gradient-to-br from-[#2fe6a6] to-[#12b886] shadow-[0_8px_20px_-8px_rgba(47,230,166,.6)]">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#04140d" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" />
-      </svg>
-    </div>
-  );
-}
+import Logo from "../components/Logo.jsx";
 
 export default function Welcome({ onNew, onReturn, hasDraft }) {
   return (
     <div className="-mt-2">
       <nav className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <LogoMark />
+          <Logo badge size={36} className="shadow-[0_8px_20px_-8px_rgba(47,230,166,.6)]" />
           <span className="text-[19px] font-extrabold tracking-tight">Orcl.</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3">

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card } from "../components/ui.jsx";
+import Logo from "../components/Logo.jsx";
 import Donut from "../components/Donut.jsx";
 import AllocationCard from "../components/AllocationCard.jsx";
 import {
@@ -37,9 +38,12 @@ export default function Dashboard({ onEdit, onLogout }) {
 
   return (
     <div className="w-full">
-      <header className="mb-4">
-        <div className="text-[13px] text-muted">{hello()}, here's your money</div>
-        <h1 className="text-[22px] font-extrabold tracking-tight">Orcl. hub</h1>
+      <header className="mb-4 flex items-center gap-3">
+        <Logo size={38} />
+        <div>
+          <div className="text-[13px] text-muted">{hello()}, here's your money</div>
+          <h1 className="text-[22px] font-extrabold leading-tight tracking-tight">Orcl. hub</h1>
+        </div>
       </header>
 
       {tab === "overview" && nudgeOpen && (

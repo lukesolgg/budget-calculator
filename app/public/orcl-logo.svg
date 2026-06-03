@@ -1,0 +1,14 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orcl" x1="6" y1="42" x2="42" y2="6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12b886"/>
+      <stop offset="0.55" stop-color="#2fe6a6"/>
+      <stop offset="1" stop-color="#5fd6ff"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#orcl)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <circle cx="24" cy="24" r="16" stroke-dasharray="75 26" transform="rotate(-45 24 24)"/>
+    <path d="M17 30 L31 11"/>
+    <path d="M23 10 L32 10 L32 19"/>
+  </g>
+</svg>
