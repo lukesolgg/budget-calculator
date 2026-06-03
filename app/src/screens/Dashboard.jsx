@@ -173,72 +173,58 @@ function Overview({ onOpenTab, onEdit }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-      {/* Left: donut, chosen-plan banner, then title + budget list */}
+      {/* Left: donut + grouped budget, plan banner, quick actions */}
       <Card className="lg:p-7">
         {breakdown.length ? (
-          <>
-            <div className="grid gap-5 sm:grid-cols-[minmax(0,270px)_1fr] sm:items-center">
-              <div className="flex justify-center">
-                <Donut items={breakdown} total={Math.max(income, breakdownSum)} idPrefix="ov" centerTop={fmt(income)} maxW={270} />
-              </div>
-              <div>
-                <h2 className="mb-2 text-[16px] font-bold">Income &amp; expenses</h2>
-                <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
-                  {breakdown.map((c) => (
-                    <span key={c.key} className="inline-flex items-center justify-between gap-2 border-b border-border/50 pb-1 text-[12.5px]">
-                      <span className="inline-flex items-center gap-2 text-muted">
-                        <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
-                        {c.name}
-                      </span>
-                      <b className="text-ink tabular-nums">{fmt(c.value)}</b>
-                    </span>
-                  ))}
-                </div>
-              </div>
+          <div className="grid gap-5 sm:grid-cols-[minmax(0,250px)_1fr] sm:items-center">
+            <div className="flex justify-center">
+              <Donut items={breakdown} total={Math.max(income, breakdownSum)} idPrefix="ov" centerTop={fmt(income)} maxW={250} />
             </div>
-
-            {hasDebt && chosen && (
-              <button
-                onClick={() => onOpenTab("debt")}
-                style={{ borderColor: chosen.def.color, boxShadow: `0 0 0 1px ${chosen.def.color}, 0 12px 30px -18px ${chosen.def.color}` }}
-                className="mt-5 flex w-full items-center gap-3 rounded-2xl border bg-[#0c121d] px-4 py-2.5 text-left transition hover:brightness-110"
-              >
-                <span className="text-xl">{PLAN_EMOJI[chosen.def.key] || "🎯"}</span>
-                <span className="flex-1">
-                  <span className="block text-[14px] font-bold">{chosen.def.title}</span>
-                  <span className="block text-[11px] text-muted">Your chosen payoff plan · tap to view</span>
-                </span>
-                <span className="text-right">
-                  <span className="block text-[9px] uppercase tracking-[.06em] text-muted">Debt-free in</span>
-                  <span className="block text-[15px] font-extrabold tabular-nums" style={{ color: chosen.def.color }}>{monthsToStr(chosen.sim.months)}</span>
-                </span>
-              </button>
-            )}
-          </>
+            <div>
+              <h2 className="mb-2.5 text-[16px] font-bold">Where your money goes</h2>
+              <GroupedBudget breakdown={breakdown} income={income} />
+            </div>
+          </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
             Set up your budget to see where your money goes.
             <div className="mt-3"><button onClick={() => onOpenTab("budget")} className="font-semibold text-accent hover:underline">Go to Budget →</button></div>
           </div>
         )}
+
+        {hasDebt && chosen && (
+          <button
+            onClick={() => onOpenTab("debt")}
+            style={{ borderColor: chosen.def.color, boxShadow: `0 0 0 1px ${chosen.def.color}, 0 12px 30px -18px ${chosen.def.color}` }}
+            className="mt-5 flex w-full items-center gap-3 rounded-2xl border bg-[#0c121d] px-4 py-2.5 text-left transition hover:brightness-110"
+          >
+            <span className="text-xl">{PLAN_EMOJI[chosen.def.key] || "🎯"}</span>
+            <span className="flex-1">
+              <span className="block text-[14px] font-bold">{chosen.def.title}</span>
+              <span className="block text-[11px] text-muted">Your chosen payoff plan · tap to view</span>
+            </span>
+            <span className="text-right">
+              <span className="block text-[9px] uppercase tracking-[.06em] text-muted">Debt-free in</span>
+              <span className="block text-[15px] font-extrabold tabular-nums" style={{ color: chosen.def.color }}>{monthsToStr(chosen.sim.months)}</span>
+            </span>
+          </button>
+        )}
+
+        <div className="mt-5 border-t border-border pt-5">
+          <h3 className="mb-2.5 text-[15px] font-bold">What do you want to do?</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <ActionCard emoji="🔎" title="In-depth budget" desc="Tweak every part of your budget." onOpen={() => onOpenTab("budget")} />
+            <ActionCard emoji="💳" title="Debt planning" desc="Your payoff plan & payments." onOpen={() => onOpenTab("debt")} />
+            <ActionCard emoji="🛟" title="Emergency fund" desc="Plan a 3–6 month safety net." soon />
+            <ActionCard emoji="🚀" title="Side hustles" desc="Boost your income." soon />
+          </div>
+        </div>
       </Card>
 
       {/* Right column */}
       <div className="flex flex-col gap-4">
         <AllocationCard income={income} living={living} minTotal={minTotal} debtMonthly={debtMonthly} savings={aSav} fun={funLeft} freq={state.payFrequency || "monthly"} />
         <Snapshot6 income={income} living={living} debts={debts} extra={aExtra} monthlyToDebt={debtMonthly} totalDebt={totalDebt} />
-      </div>
-
-      {/* Quick actions */}
-      <div className="lg:col-span-2">
-        <h2 className="mb-1 text-[18px] font-bold">What do you want to do?</h2>
-        <p className="mb-3 text-sm text-muted">Jump straight to the tools that matter to you.</p>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <ActionCard emoji="🔎" title="In-depth budget" desc="See and tweak every part of your budget." onOpen={() => onOpenTab("budget")} />
-          <ActionCard emoji="💳" title="Debt planning" desc="Your payoff plan, and log payments." onOpen={() => onOpenTab("debt")} />
-          <ActionCard emoji="🛟" title="Emergency fund" desc="Plan a 3–6 month safety net." soon />
-          <ActionCard emoji="🚀" title="Side hustles" desc="Boost your income with extra work." soon />
-        </div>
       </div>
 
       {/* Recommendations (full width) */}
@@ -344,6 +330,45 @@ function Snapshot6({ income, living, debts, extra, monthlyToDebt, totalDebt }) {
 
 function Legend({ c, t }) {
   return <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c }} />{t}</span>;
+}
+
+function GroupedBudget({ breakdown, income }) {
+  const PAY = new Set(["debtmin", "debtextra"]);
+  const SAVE = new Set(["savings", "fun"]);
+  const sum = (a) => a.reduce((s, c) => s + c.value, 0);
+  const groups = [
+    { label: "Essentials", items: breakdown.filter((i) => !PAY.has(i.key) && !SAVE.has(i.key)) },
+    { label: "Debt payments", items: breakdown.filter((i) => PAY.has(i.key)) },
+    { label: "Savings & spare", items: breakdown.filter((i) => SAVE.has(i.key)) },
+  ].filter((g) => g.items.length);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between border-b border-border pb-1.5 text-[13px]">
+        <span className="font-semibold text-muted">Income</span>
+        <b className="tabular-nums">{fmt(income)}</b>
+      </div>
+      {groups.map((g) => (
+        <div key={g.label}>
+          <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[.06em] text-muted">
+            <span>{g.label}</span>
+            <span className="tabular-nums text-ink/70">{fmt(sum(g.items))}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-0.5">
+            {g.items.map((c) => (
+              <span key={c.key} className="flex items-center justify-between gap-2 text-[12.5px]">
+                <span className="flex min-w-0 items-center gap-1.5 text-muted">
+                  <span className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: c.color }} />
+                  <span className="truncate">{c.name}</span>
+                </span>
+                <b className="shrink-0 tabular-nums">{fmt(c.value)}</b>
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function ActionCard({ emoji, title, desc, onOpen, soon }) {
