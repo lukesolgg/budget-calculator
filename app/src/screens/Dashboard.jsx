@@ -235,9 +235,8 @@ function Overview({ onOpenTab, onEdit }) {
       {/* Recommendations (full width) */}
       {recs.length > 0 && (
         <div className="lg:col-span-2">
-          <h2 className="mb-1 text-[18px] font-bold">Recommended for you</h2>
-          <p className="mb-3 text-sm text-muted">Personalised next steps based on your numbers.</p>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <h2 className="mb-2 text-[16px] font-bold">Recommended for you <span className="text-[12px] font-normal text-muted">· next steps from your numbers</span></h2>
+          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
             {recs.map((r) => <RecCard key={r.id} r={r} onOpen={LIVE.has(r.sectionKey) ? () => onOpenTab(r.sectionKey) : null} />)}
           </div>
         </div>
@@ -419,19 +418,15 @@ function buildRecommendations({ debts, income, living, spare, mortgageOn }) {
 
 function RecCard({ r, onOpen }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-border bg-[#0a120f]/80 p-4">
-      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f241c] text-xl">{r.emoji}</div>
-      <h3 className="text-[15px] font-bold leading-snug">{r.title}</h3>
-      <p className="mt-1 flex-1 text-[13px] leading-relaxed text-muted">{r.text}</p>
-      {onOpen ? (
-        <button onClick={onOpen} className="mt-3 inline-flex w-fit items-center gap-1.5 text-[13px] font-semibold text-accent hover:underline">
-          View now
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-        </button>
-      ) : (
-        <span className="mt-3 inline-flex w-fit rounded-full border border-[#2a3b34] bg-[#0c1a15] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.08em] text-muted">Coming soon</span>
-      )}
-    </div>
+    <button onClick={onOpen || undefined} className={`flex items-start gap-3 rounded-xl border border-border bg-[#0a120f]/80 p-3 text-left ${onOpen ? "transition hover:-translate-y-0.5 hover:border-[#244a3c]" : "cursor-default"}`}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0f241c] text-lg">{r.emoji}</span>
+      <span className="min-w-0">
+        <span className="block text-[13.5px] font-bold leading-snug">{r.title}</span>
+        <span className="mt-0.5 block text-[12px] leading-snug text-muted">{r.text}</span>
+        {onOpen ? <span className="mt-1 inline-block text-[12px] font-semibold text-accent">View now →</span>
+          : <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-[.06em] text-muted">Coming soon</span>}
+      </span>
+    </button>
   );
 }
 
