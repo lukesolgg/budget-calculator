@@ -20,58 +20,64 @@ export default function Career({ onBack, embedded }) {
         </div>
       )}
 
-      <header className="mb-6">
-        <h1 className="text-[26px] font-extrabold tracking-tight">Career &amp; income</h1>
-        <p className="mt-1 text-muted">See how your pay compares, where you could progress, and how a side hustle adds up.</p>
+      <header className="mb-4">
+        <h1 className="text-[22px] font-extrabold tracking-tight">Career &amp; income</h1>
+        <p className="mt-1 text-sm text-muted">See how your pay compares, where you could progress, and how a side hustle adds up.</p>
       </header>
 
-      {/* Current role */}
-      <Card className="mb-6">
-        <h3 className="mb-1 font-bold">Your current role</h3>
-        <p className="mb-3 text-[13px] text-muted">Pick your job to compare your pay against the UK median (ONS, 2025).</p>
-        <RolePicker value={state.jobSoc} onPick={(soc) => update({ jobSoc: soc })} placeholder="Search your job title…" />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-5">
+          {/* Current role */}
+          <Card className="lg:p-5">
+            <h3 className="mb-1 font-bold">Your current role</h3>
+            <p className="mb-3 text-[13px] text-muted">Pick your job to compare your pay against the UK median (ONS, 2025).</p>
+            <RolePicker value={state.jobSoc} onPick={(soc) => update({ jobSoc: soc })} placeholder="Search your job title…" />
 
-        {me && (
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Stat label="UK median for this role" value={me.medianAnnual != null ? fmt(me.medianAnnual) + "/yr" : "—"} />
-            <Stat label="Your income" value={annualIncome > 0 ? fmt(annualIncome) + "/yr" : "Not set"} />
-            {me.medianAnnual != null && annualIncome > 0 && (() => {
-              const diff = annualIncome - me.medianAnnual;
-              return <Stat label={diff >= 0 ? "Above median" : "Below median"} value={(diff >= 0 ? "+" : "−") + fmt(Math.abs(diff)) + "/yr"} tone={diff >= 0 ? "good" : "bad"} />;
-            })()}
-          </div>
-        )}
-        {me && me.medianAnnual != null && annualIncome > 0 && annualIncome < me.medianAnnual && (
-          <p className="mt-3 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3.5 py-2.5 text-[13px] text-warn">
-            You're earning below the typical pay for this role — worth a salary conversation, or see the progression options below.
-          </p>
-        )}
-      </Card>
+            {me && (
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Stat label="UK median for this role" value={me.medianAnnual != null ? fmt(me.medianAnnual) + "/yr" : "—"} />
+                <Stat label="Your income" value={annualIncome > 0 ? fmt(annualIncome) + "/yr" : "Not set"} />
+                {me.medianAnnual != null && annualIncome > 0 && (() => {
+                  const diff = annualIncome - me.medianAnnual;
+                  return <Stat label={diff >= 0 ? "Above median" : "Below median"} value={(diff >= 0 ? "+" : "−") + fmt(Math.abs(diff)) + "/yr"} tone={diff >= 0 ? "good" : "bad"} />;
+                })()}
+              </div>
+            )}
+            {me && me.medianAnnual != null && annualIncome > 0 && annualIncome < me.medianAnnual && (
+              <p className="mt-3 rounded-lg border border-[#5a3d12] bg-[#1c1407] px-3.5 py-2.5 text-[13px] text-warn">
+                You're earning below the typical pay for this role — worth a salary conversation, or see the progression options.
+              </p>
+            )}
+          </Card>
 
-      {/* Progression */}
-      {me && (
-        <Card className="mb-6">
-          <h3 className="mb-1 font-bold">Where you could progress</h3>
-          <p className="mb-3 text-[13px] text-muted">Higher-paying roles in your field, by typical UK pay.</p>
-          <Progression soc={me.soc} income={income} />
-        </Card>
-      )}
+          {/* Progression */}
+          {me && (
+            <Card className="lg:p-5">
+              <h3 className="mb-1 font-bold">Where you could progress</h3>
+              <p className="mb-3 text-[13px] text-muted">Higher-paying roles in your field, by typical UK pay.</p>
+              <div className="max-h-[280px] overflow-y-auto thin-scroll pr-1"><Progression soc={me.soc} income={income} /></div>
+            </Card>
+          )}
+        </div>
 
-      {/* Compare any role */}
-      <Card className="mb-6">
-        <h3 className="mb-1 font-bold">Compare another job</h3>
-        <p className="mb-3 text-[13px] text-muted">Thinking of a change? See what another role typically pays.</p>
-        <CompareRole annualIncome={annualIncome} />
-      </Card>
+        <div className="flex flex-col gap-5">
+          {/* Compare any role */}
+          <Card className="lg:p-5">
+            <h3 className="mb-1 font-bold">Compare another job</h3>
+            <p className="mb-3 text-[13px] text-muted">Thinking of a change? See what another role typically pays.</p>
+            <CompareRole annualIncome={annualIncome} />
+          </Card>
 
-      {/* Side hustle */}
-      <Card>
-        <h3 className="mb-1 font-bold">Side hustle / second job</h3>
-        <p className="mb-3 text-[13px] text-muted">See what a few extra hours a week could add to your income.</p>
-        <SideHustle />
-      </Card>
+          {/* Side hustle */}
+          <Card className="lg:p-5">
+            <h3 className="mb-1 font-bold">Side hustle / second job</h3>
+            <p className="mb-3 text-[13px] text-muted">See what a few extra hours a week could add to your income.</p>
+            <SideHustle />
+          </Card>
+        </div>
+      </div>
 
-      <p className="mt-6 text-center text-[11px] text-muted">
+      <p className="mt-5 text-center text-[11px] text-muted">
         Pay figures are UK median gross earnings (ONS ASHE 2025, by occupation). General information, not financial or career advice.
       </p>
     </div>

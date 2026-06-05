@@ -10,26 +10,30 @@ export default function Settings({ onEdit, onLogout }) {
   const { session, saveState, logout, changePin, wipeData } = useAuth();
 
   return (
-    <div className="mx-auto max-w-[760px]">
-      <header className="mb-5">
-        <h1 className="text-[24px] font-extrabold tracking-tight">Settings</h1>
+    <div className="mx-auto max-w-[1000px]">
+      <header className="mb-4">
+        <h1 className="text-[22px] font-extrabold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-muted">Manage your account, goals and data. Everything saves automatically.</p>
       </header>
 
-      <AccountCard session={session} saveState={saveState} changePin={changePin} logout={logout} onLogout={onLogout} />
-      <GoalsCard state={state} update={update} />
-      <DetailsCard onEdit={onEdit} />
-      <DataCard state={state} setState={setState} wipeData={wipeData} onLogout={onLogout} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-5">
+          <AccountCard session={session} saveState={saveState} changePin={changePin} logout={logout} onLogout={onLogout} />
+          <DetailsCard onEdit={onEdit} />
+          <DataCard state={state} setState={setState} wipeData={wipeData} onLogout={onLogout} />
+        </div>
+        <GoalsCard state={state} update={update} />
+      </div>
 
-      <p className="mt-6 text-center text-[11px] text-muted">Orcl. is a pre-alpha preview. General guidance, not financial advice.</p>
+      <p className="mt-5 text-center text-[11px] text-muted">Orcl. is a pre-alpha preview. General guidance, not financial advice.</p>
     </div>
   );
 }
 
 function Section({ title, desc, children }) {
   return (
-    <Card className="mb-5">
-      <h2 className="text-[17px] font-bold">{title}</h2>
+    <Card className="lg:p-5">
+      <h2 className="text-[16px] font-bold">{title}</h2>
       {desc && <p className="mb-4 mt-0.5 text-[13px] text-muted">{desc}</p>}
       {children}
     </Card>
