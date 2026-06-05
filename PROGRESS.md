@@ -83,8 +83,9 @@ plans, weekly planner, investments, second-job suggestions.
      time-to-reach slider, where-to-keep link. state.emergency {saved,target,
      variable,dependents}; schema 10. Quick-action card + section now live.
   - Git author fixed to lukesolgg@gmail.com.
-  - STILL TODO from the list: finish "every tab one screen" (Career, Settings,
-    maybe Overview recs); broader unused-code/efficiency tidy.
+  - Follow-up (done): Career + Settings reflowed to 2-col one-screen layouts
+    (progression list scrollable); Overview recommendations condensed to a compact
+    strip; dead code removed (Inputs.jsx, projectInterestFreeShortfall, bestSavings).
 - Planner tab + Debt tab one-frame redesign: calendar/payday scheduler moved out
   of the Debt tab into its own "Planner" sidebar tab (screens/Planner.jsx); shared
   helpers in lib/planner.js (debtTone + date helpers). Debt tab is now a single
