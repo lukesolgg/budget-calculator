@@ -249,26 +249,3 @@ export function projectSavings({ lump = 0, monthly = 0, annualRate = 0.045, year
   return { balance: bal, contributed, interest: bal - contributed, yearly };
 }
 
-// For an interest-free debt: payment needed to clear in time, and the
-// least-interest fallback if that's unaffordable.
-export function projectInterestFreeShortfall(d, payment) {
-  const mRate = d.rate / 100 / 12;
-  let bal = d.balance;
-  for (let m = 0; m < d.freeMonths && bal > 0; m++) bal -= payment;
-  bal = Math.max(0, bal);
-  const leftover = bal;
-
-  let interest = 0, guard = 0;
-  while (bal > 0.005 && guard < 1200) {
-    guard++;
-    const it = bal * mRate; interest += it; bal += it; bal -= payment;
-    if (payment <= it) { interest = Infinity; break; }
-  }
-  let bal2 = Math.max(0, d.balance - d.min * d.freeMonths), int2 = 0, g2 = 0;
-  while (bal2 > 0.005 && g2 < 1200) {
-    g2++;
-    const it = bal2 * mRate; int2 += it; bal2 += it; bal2 -= payment;
-    if (payment <= it) { int2 = Infinity; break; }
-  }
-  return { leftover, interest, interestIfMinOnly: int2 };
-}

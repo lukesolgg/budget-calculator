@@ -47,7 +47,3 @@ export const SAVINGS_ACCOUNTS = [
     notes: "Tax-free. 12-month bonus for new money. Flexible ISA.",
   },
 ];
-
-// Best (highest AER) account overall — handy for headline figures.
-export const bestSavings = () =>
-  SAVINGS_ACCOUNTS.reduce((best, a) => (a.aer > best.aer ? a : best), SAVINGS_ACCOUNTS[0]);
