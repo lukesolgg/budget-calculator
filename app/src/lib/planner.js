@@ -48,8 +48,9 @@ const DAY_MS = 86400000;
 export const FREQ_LABEL = { weekly: "Weekly", fortnightly: "Fortnightly", monthly: "Monthly" };
 
 // All occurrences of a recurring item within [start, end). Monthly uses the
-// day-of-month; weekly/fortnightly step from `anchor` (usually the payday).
-export function occurrences(freq, day, anchor, start, end) {
+// day-of-month; weekly/fortnightly land on weekday `dow` (0=Mon..6=Sun),
+// fortnightly phased from `anchor` (the payday).
+export function occurrences(freq, day, dow, anchor, start, end) {
   const out = [];
   if (freq === "monthly") {
     let m = new Date(start.getFullYear(), start.getMonth(), 1);
@@ -61,6 +62,9 @@ export function occurrences(freq, day, anchor, start, end) {
   } else {
     const step = (freq === "fortnightly" ? 14 : 7) * DAY_MS;
     let d = new Date(anchor); d.setHours(0, 0, 0, 0);
+    const cur = (d.getDay() + 6) % 7;           // Mon=0
+    const want = dow == null ? cur : dow;
+    d = new Date(d.getTime() + (((want - cur + 7) % 7)) * DAY_MS); // align to weekday
     while (d.getTime() >= start.getTime()) d = new Date(d.getTime() - step);
     d = new Date(d.getTime() + step);
     while (d < end) { if (d >= start) out.push(new Date(d)); d = new Date(d.getTime() + step); }

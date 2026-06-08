@@ -189,20 +189,21 @@ export function expenseItemsOf(s) {
 }
 
 // Normalise a billDue entry — legacy was a bare day-of-month number.
+// { freq, day (1–31 for monthly), dow (0=Mon..6=Sun for weekly/fortnightly) }
 export function normBill(v) {
   if (v == null || v === "") return null;
-  if (typeof v === "number") return { freq: "monthly", day: v };
-  return { freq: v.freq || "monthly", day: v.day || 0 };
+  if (typeof v === "number") return { freq: "monthly", day: v, dow: 0 };
+  return { freq: v.freq || "monthly", day: v.day || 0, dow: v.dow ?? 0 };
 }
 
 // Bills/essentials that have a schedule set — for the payment calendar.
-// Returns { key, name, color, amountMonthly, freq, day }.
+// Returns { key, name, color, amountMonthly, freq, day, dow }.
 export function billDueItemsOf(s) {
   const items = [];
   const add = (key, name, color, amount) => {
     const b = normBill(s.billDue?.[key]);
     if (amount > 0 && b && (b.freq !== "monthly" || b.day)) {
-      items.push({ key, name, color, amountMonthly: amount, freq: b.freq, day: b.day });
+      items.push({ key, name, color, amountMonthly: amount, freq: b.freq, day: b.day, dow: b.dow });
     }
   };
   if (s.mortgage.on) add("mortgage", "Mortgage", MORTGAGE_COLOR, Math.max(0, parseFloat(s.mortgage.payment) || 0));

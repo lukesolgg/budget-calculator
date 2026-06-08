@@ -45,11 +45,6 @@ export const SECTIONS = [
     goalLabel: "Retrain or upskill",
     desc: "Courses that boost earning power, with cost vs payoff mapped.",
   },
-  {
-    key: "planner", emoji: "🗓️", title: "Weekly planner", live: false,
-    goalLabel: "Organise my week",
-    desc: "A visual timetable that finds free hours for your goals.",
-  },
 ];
 
 export const sectionByKey = (key) => SECTIONS.find((s) => s.key === key) || null;

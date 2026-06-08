@@ -29,7 +29,7 @@ export default function Planner() {
     items.push({ name: "Car Loan", perOcc: parseFloat(state.car.payment) || 0, freq: "monthly", day: +state.car.dueDay, kind: "debt", tx: t.tx, bg: t.bg });
   }
   billDueItemsOf(state).forEach((b) => {
-    items.push({ name: b.name, perOcc: monthlyToFreq(b.amountMonthly, b.freq), freq: b.freq, day: b.day, kind: "bill", tx: b.color, bg: "#0d1420" });
+    items.push({ name: b.name, perOcc: monthlyToFreq(b.amountMonthly, b.freq), freq: b.freq, day: b.day, dow: b.dow, kind: "bill", tx: b.color, bg: "#0d1420" });
   });
 
   const paydays = state.payAnchor ? generatePaydays(state.payAnchor, freq, 14) : [];
@@ -38,7 +38,7 @@ export default function Planner() {
   const windowDue = (start, end) => {
     const due = [];
     items.forEach((it) => {
-      const occ = occurrences(it.freq, it.day, anchor, start, end);
+      const occ = occurrences(it.freq, it.day, it.dow, anchor, start, end);
       if (occ.length) due.push({ it, date: occ[0], amount: occ.length * it.perOcc });
     });
     due.sort((a, b) => a.date - b.date);
@@ -63,7 +63,7 @@ export default function Planner() {
   const monthStart = new Date(year, month, 1), monthEnd = new Date(year, month + 1, 1);
   const paydaySet = new Set(paydays.filter((p) => p.getFullYear() === year && p.getMonth() === month).map((p) => p.getDate()));
   const dueByDay = {};
-  items.forEach((it) => occurrences(it.freq, it.day, anchor, monthStart, monthEnd).forEach((d) => { (dueByDay[d.getDate()] ||= []).push(it); }));
+  items.forEach((it) => occurrences(it.freq, it.day, it.dow, anchor, monthStart, monthEnd).forEach((d) => { (dueByDay[d.getDate()] ||= []).push(it); }));
   const cells = [...Array(firstW).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
 
   return (
