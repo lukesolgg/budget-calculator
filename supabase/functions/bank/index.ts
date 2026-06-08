@@ -95,11 +95,13 @@ Deno.serve(async (req) => {
 
   try {
     if (action === "institutions") {
-      // No country filter: a Sandbox app only sees mock banks (registered under
-      // FI, not GB), and Production should list every supported bank. The picker
-      // shows the country and lets the user search, so a flat list is fine.
+      // We're a UK app: show GB + Ireland banks. We filter client-side on the
+      // full list (the API's country filter proved unreliable). Any sandbox
+      // "mock/test" bank is always kept so testing works before going live.
       const r = await eb(`/aspsps`);
+      const wanted = new Set(["GB", "IE"]);
       const list = (r.aspsps || [])
+        .filter((a: any) => wanted.has(a.country) || /mock|sandbox|test|fake/i.test(a.name || ""))
         .map((a: any) => ({ name: a.name, country: a.country, logo: a.logo }))
         .sort((a: any, b: any) => (a.country === b.country ? a.name.localeCompare(b.name) : a.country.localeCompare(b.country)));
       return json({ institutions: list });
