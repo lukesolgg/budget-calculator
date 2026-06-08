@@ -64,6 +64,15 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Bank linking scaffold (GoCardless Bank Account Data / Open Banking): Supabase
+  Edge Function `supabase/functions/bank/index.ts` (verifies username+PIN via
+  login_account RPC, mints GoCardless token from GC_SECRET_ID/KEY, requisition →
+  accounts → transactions, stores in `bank_data` table via service role).
+  Frontend: lib/bank.js + "Connected banks (beta)" card in Settings (connect →
+  bank picker → consent redirect → finish on return). Degrades to "not switched
+  on yet" until deployed. DEPLOY STEPS in BANK_SETUP.md (Luke: GoCardless signup,
+  bank_data table SQL, `supabase secrets set` GC_*, `functions deploy bank
+  --no-verify-jwt`, GC_REDIRECT = live URL). NOT testable from CI (no outbound).
 - Overview now one-screen: removed "Recommended for you" (+ dead buildRecommendations/
   RecCard); quick actions are a slim single row. Dropped the redundant "Weekly
   planner (soon)" section (real Planner tab exists). Budget page redesigned:
