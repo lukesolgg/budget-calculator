@@ -95,8 +95,14 @@ Deno.serve(async (req) => {
 
   try {
     if (action === "institutions") {
-      const r = await eb(`/aspsps?country=GB`);
-      return json({ institutions: (r.aspsps || []).map((a: any) => ({ name: a.name, country: a.country, logo: a.logo })) });
+      // No country filter: a Sandbox app only sees mock banks (registered under
+      // FI, not GB), and Production should list every supported bank. The picker
+      // shows the country and lets the user search, so a flat list is fine.
+      const r = await eb(`/aspsps`);
+      const list = (r.aspsps || [])
+        .map((a: any) => ({ name: a.name, country: a.country, logo: a.logo }))
+        .sort((a: any, b: any) => (a.country === b.country ? a.name.localeCompare(b.name) : a.country.localeCompare(b.country)));
+      return json({ institutions: list });
     }
 
     if (action === "start") {

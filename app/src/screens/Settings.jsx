@@ -207,23 +207,33 @@ function BankCard({ session }) {
         </>
       )}
 
-      {view === "picker" && (
-        <div>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your bank…"
-            className="mb-2 w-full rounded-[10px] border border-border bg-[#0b0f17] px-3 py-2.5 text-[14px] text-ink outline-none focus:border-accent" />
-          <div className="max-h-[220px] overflow-y-auto thin-scroll">
-            {insts.filter((i) => i.name.toLowerCase().includes(q.toLowerCase())).map((i) => (
-              <button key={i.name} onClick={() => pick(i)} disabled={busy}
-                className="flex w-full items-center gap-3 border-b border-border/60 px-2 py-2.5 text-left text-sm last:border-0 hover:bg-[#0c1420]">
-                {i.logo ? <img src={i.logo} alt="" className="h-6 w-6 rounded" /> : <span className="h-6 w-6 rounded bg-[#0f241c]" />}
-                <span className="truncate">{i.name}</span>
-              </button>
-            ))}
-            {!insts.length && <p className="py-3 text-[13px] text-muted">No banks returned.</p>}
+      {view === "picker" && (() => {
+        const ql = q.trim().toLowerCase();
+        const matches = insts.filter((i) =>
+          i.name.toLowerCase().includes(ql) || (i.country || "").toLowerCase().includes(ql));
+        return (
+          <div>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by bank or country (e.g. GB, Mock)…"
+              className="mb-2 w-full rounded-[10px] border border-border bg-[#0b0f17] px-3 py-2.5 text-[14px] text-ink outline-none focus:border-accent" />
+            <div className="max-h-[260px] overflow-y-auto thin-scroll">
+              {matches.map((i) => (
+                <button key={`${i.country}:${i.name}`} onClick={() => pick(i)} disabled={busy}
+                  className="flex w-full items-center gap-3 border-b border-border/60 px-2 py-2.5 text-left text-sm last:border-0 hover:bg-[#0c1420]">
+                  {i.logo ? <img src={i.logo} alt="" className="h-6 w-6 rounded" /> : <span className="h-6 w-6 rounded bg-[#0f241c]" />}
+                  <span className="truncate">{i.name}</span>
+                  {i.country && <span className="ml-auto shrink-0 rounded bg-[#0f241c] px-1.5 py-0.5 text-[10px] font-semibold text-muted">{i.country}</span>}
+                </button>
+              ))}
+              {!insts.length && <p className="py-3 text-[13px] text-muted">No banks returned — re-deploy the function with the latest code.</p>}
+              {!!insts.length && !matches.length && <p className="py-3 text-[13px] text-muted">No match for "{q}".</p>}
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[11px] text-muted">{insts.length} bank{insts.length === 1 ? "" : "s"} available</span>
+              <button onClick={() => setView("none")} className="text-[12px] text-muted hover:text-ink">Cancel</button>
+            </div>
           </div>
-          <button onClick={() => setView("none")} className="mt-2 text-[12px] text-muted hover:text-ink">Cancel</button>
-        </div>
-      )}
+        );
+      })()}
 
       {view === "connected" && (
         <div>
