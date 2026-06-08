@@ -64,6 +64,12 @@ plans, weekly planner, investments, second-job suggestions.
 - Files with JSX must be .jsx.
 
 ## Recent changes (newest first)
+- Overview now one-screen: removed "Recommended for you" (+ dead buildRecommendations/
+  RecCard); quick actions are a slim single row. Dropped the redundant "Weekly
+  planner (soon)" section (real Planner tab exists). Budget page redesigned:
+  polished table (colour bar, hover, frequency pills) with BOTH Monthly + Weekly
+  amount columns and totals; weekly/fortnightly bills now pick a weekday (dow) —
+  occurrences() lands on that weekday (Mon=0). billDue entry = {freq,day,dow}.
 - Overnight TODO batch (Luke's list), committed per stage:
   1. Global input styling (index.css): killed number spinners, dark date pickers
      (color-scheme + indicator filter), .app-select chevron, .thin-scroll.
