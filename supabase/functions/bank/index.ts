@@ -1,138 +1,137 @@
-// Supabase Edge Function: "bank"
-// Securely talks to GoCardless Bank Account Data (Open Banking) on behalf of an
-// Orcl. user. The frontend never sees the GoCardless secrets — they live here.
+// Supabase Edge Function: "bank"  (Enable Banking — Open Banking, free for personal use)
+// Secrets never reach the frontend. Auth = an RS256 JWT signed with your app's
+// private key.
 //
 // Actions (POST JSON { action, username, pin, ... }):
-//   institutions          -> list UK banks (id, name, logo)
-//   start { institutionId } -> create a consent requisition, return { link }
-//   finish                -> after the user returns, fetch accounts + transactions, store
-//   data                  -> return the stored accounts + transactions
-//   disconnect            -> forget the connection
+//   institutions            -> list UK banks (name, country, logo)
+//   start { name, country }  -> begin consent, return { link }
+//   finish { code }          -> after the bank redirect, fetch accounts + transactions, store
+//   data                     -> return the stored accounts + transactions
+//   disconnect               -> forget the connection
 //
-// Required function secrets (supabase secrets set ...):
-//   GC_SECRET_ID, GC_SECRET_KEY   (from GoCardless Bank Account Data)
-//   GC_REDIRECT                   (URL the bank sends the user back to — your live app URL)
+// Required function secrets:
+//   EB_APP_ID            (Enable Banking application id — used as the JWT `kid`)
+//   EB_PRIVATE_KEY_B64   (base64 of your downloaded PEM private key)
+//   EB_REDIRECT          (a redirect URL registered in the EB app — your live app URL)
 // Auto-provided by Supabase: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
 
-const GC = "https://bankaccountdata.gocardless.com/api/v2";
+const EB = "https://api.enablebanking.com";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
-const GC_SECRET_ID = Deno.env.get("GC_SECRET_ID") ?? "";
-const GC_SECRET_KEY = Deno.env.get("GC_SECRET_KEY") ?? "";
-const GC_REDIRECT = Deno.env.get("GC_REDIRECT") ?? "";
+const EB_APP_ID = Deno.env.get("EB_APP_ID") ?? "";
+const EB_PRIVATE_KEY_B64 = Deno.env.get("EB_PRIVATE_KEY_B64") ?? "";
+const EB_REDIRECT = Deno.env.get("EB_REDIRECT") ?? "";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type, apikey",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, "content-type": "application/json" } });
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { ...cors, "content-type": "application/json" } });
 
-// --- Supabase REST helpers (service role: bypasses RLS) ---
-async function sb(path: string, init: RequestInit = {}) {
-  return fetch(`${SB_URL}/rest/v1/${path}`, {
-    ...init,
-    headers: { apikey: SB_SERVICE, authorization: `Bearer ${SB_SERVICE}`, "content-type": "application/json", ...(init.headers || {}) },
-  });
+// --- base64url + key helpers ---
+const b64url = (bytes: Uint8Array) => {
+  let s = ""; for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+function pemToDer(pem: string) {
+  const body = pem.replace(/-----BEGIN [^-]+-----/, "").replace(/-----END [^-]+-----/, "").replace(/\s+/g, "");
+  const bin = atob(body); const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
 }
-
-// Verify the anonymous user's username+PIN via the existing login RPC.
-async function verify(username: string, pin: string) {
-  const r = await fetch(`${SB_URL}/rest/v1/rpc/login_account`, {
-    method: "POST",
-    headers: { apikey: SB_ANON, authorization: `Bearer ${SB_ANON}`, "content-type": "application/json" },
-    body: JSON.stringify({ p_username: username, p_pin: pin }),
-  });
-  if (!r.ok) return false;
-  const data = await r.json();
-  return data !== "BAD";
+let keyPromise: Promise<CryptoKey> | null = null;
+function privateKey() {
+  if (!keyPromise) {
+    const pem = atob(EB_PRIVATE_KEY_B64);
+    keyPromise = crypto.subtle.importKey("pkcs8", pemToDer(pem), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  }
+  return keyPromise;
 }
-
-// --- GoCardless helpers ---
-async function gcToken() {
-  const r = await fetch(`${GC}/token/new/`, {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ secret_id: GC_SECRET_ID, secret_key: GC_SECRET_KEY }),
-  });
-  if (!r.ok) throw new Error(`GoCardless token failed (${r.status})`);
-  return (await r.json()).access as string;
+async function ebJwt() {
+  const enc = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+  const now = Math.floor(Date.now() / 1000);
+  const head = enc({ typ: "JWT", alg: "RS256", kid: EB_APP_ID });
+  const body = enc({ iss: "enablebanking.com", aud: "api.enablebanking.com", iat: now, exp: now + 3600 });
+  const sig = await crypto.subtle.sign({ name: "RSASSA-PKCS1-v1_5" }, await privateKey(), new TextEncoder().encode(`${head}.${body}`));
+  return `${head}.${body}.${b64url(new Uint8Array(sig))}`;
 }
-async function gc(token: string, path: string, init: RequestInit = {}) {
-  const r = await fetch(`${GC}${path}`, {
-    ...init,
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "application/json", ...(init.headers || {}) },
-  });
-  if (!r.ok) throw new Error(`GoCardless ${path} failed (${r.status})`);
+async function eb(path: string, init: RequestInit = {}) {
+  const jwt = await ebJwt();
+  const r = await fetch(`${EB}${path}`, { ...init, headers: { authorization: `Bearer ${jwt}`, "content-type": "application/json", ...(init.headers || {}) } });
+  if (!r.ok) throw new Error(`Enable Banking ${path} (${r.status}): ${await r.text().catch(() => "")}`.slice(0, 300));
   return r.json();
 }
 
-async function getRow(username: string) {
-  const r = await sb(`bank_data?username=eq.${encodeURIComponent(username)}&select=*`);
-  const rows = await r.json();
-  return rows[0] || null;
+// --- Supabase + auth ---
+async function sb(path: string, init: RequestInit = {}) {
+  return fetch(`${SB_URL}/rest/v1/${path}`, { ...init, headers: { apikey: SB_SERVICE, authorization: `Bearer ${SB_SERVICE}`, "content-type": "application/json", ...(init.headers || {}) } });
 }
-async function upsertRow(username: string, patch: Record<string, unknown>) {
-  await sb(`bank_data?on_conflict=username`, {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify({ username, updated_at: new Date().toISOString(), ...patch }),
+async function verify(username: string, pin: string) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/login_account`, {
+    method: "POST", headers: { apikey: SB_ANON, authorization: `Bearer ${SB_ANON}`, "content-type": "application/json" },
+    body: JSON.stringify({ p_username: username, p_pin: pin }),
   });
+  if (!r.ok) return false;
+  return (await r.json()) !== "BAD";
+}
+async function getRow(u: string) { const r = await sb(`bank_data?username=eq.${encodeURIComponent(u)}&select=*`); return (await r.json())[0] || null; }
+async function upsertRow(u: string, patch: Record<string, unknown>) {
+  await sb(`bank_data?on_conflict=username`, { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ username: u, updated_at: new Date().toISOString(), ...patch }) });
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
-  if (!GC_SECRET_ID || !GC_SECRET_KEY) return json({ error: "not_configured", message: "Bank linking isn't switched on yet." }, 503);
+  if (!EB_APP_ID || !EB_PRIVATE_KEY_B64) return json({ error: "not_configured", message: "Bank linking isn't switched on yet." }, 503);
 
-  let body: any;
-  try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
+  let body: any; try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
   const { action, username, pin } = body || {};
   if (!username || !pin) return json({ error: "auth_required" }, 401);
   if (!(await verify(username, pin))) return json({ error: "unauthorized" }, 401);
 
   try {
     if (action === "institutions") {
-      const token = await gcToken();
-      const list = await gc(token, `/institutions/?country=gb`);
-      return json({ institutions: list.map((i: any) => ({ id: i.id, name: i.name, logo: i.logo })) });
+      const r = await eb(`/aspsps?country=GB`);
+      return json({ institutions: (r.aspsps || []).map((a: any) => ({ name: a.name, country: a.country, logo: a.logo })) });
     }
 
     if (action === "start") {
-      const token = await gcToken();
-      const reference = `${username}-${crypto.randomUUID().slice(0, 8)}`;
-      const reqn = await gc(token, `/requisitions/`, {
+      const validUntil = new Date(Date.now() + 89 * 864e5).toISOString();
+      const r = await eb(`/auth`, {
         method: "POST",
-        body: JSON.stringify({ redirect: GC_REDIRECT, institution_id: body.institutionId, reference, user_language: "EN" }),
+        body: JSON.stringify({ access: { valid_until: validUntil }, aspsp: { name: body.name, country: body.country || "GB" }, state: crypto.randomUUID(), redirect_url: EB_REDIRECT, psu_type: "personal" }),
       });
-      await upsertRow(username, { requisition_id: reqn.id, ref: reference, accounts: null, transactions: null });
-      return json({ link: reqn.link, requisitionId: reqn.id });
+      return json({ link: r.url });
     }
 
     if (action === "finish") {
-      const row = await getRow(username);
-      if (!row?.requisition_id) return json({ error: "no_link" }, 400);
-      const token = await gcToken();
-      const reqn = await gc(token, `/requisitions/${row.requisition_id}/`);
+      if (!body.code) return json({ error: "no_code" }, 400);
+      const session = await eb(`/sessions`, { method: "POST", body: JSON.stringify({ code: body.code }) });
+      const accs = session.accounts || [];
       const accounts: any[] = [];
       const transactions: any[] = [];
-      for (const id of reqn.accounts || []) {
+      const dateFrom = new Date(Date.now() - 89 * 864e5).toISOString().slice(0, 10);
+      for (const a of accs) {
+        const uid = typeof a === "string" ? a : a.uid;
+        const meta = typeof a === "string" ? {} : a;
         try {
-          const [details, balances, txns] = await Promise.all([
-            gc(token, `/accounts/${id}/details/`).catch(() => ({})),
-            gc(token, `/accounts/${id}/balances/`).catch(() => ({})),
-            gc(token, `/accounts/${id}/transactions/`).catch(() => ({ transactions: {} })),
+          const [bal, txns] = await Promise.all([
+            eb(`/accounts/${uid}/balances`).catch(() => ({})),
+            eb(`/accounts/${uid}/transactions?date_from=${dateFrom}`).catch(() => ({ transactions: [] })),
           ]);
-          accounts.push({ id, name: details?.account?.name || details?.account?.ownerName || "Account", iban: details?.account?.iban || "", balances: (balances?.balances || []).map((b: any) => ({ amount: b.balanceAmount?.amount, currency: b.balanceAmount?.currency, type: b.balanceType })) });
-          for (const t of (txns?.transactions?.booked || []).slice(0, 200)) {
-            transactions.push({ accountId: id, id: t.transactionId || t.internalTransactionId, date: t.bookingDate || t.valueDate, amount: t.transactionAmount?.amount, currency: t.transactionAmount?.currency, name: t.creditorName || t.debtorName || t.remittanceInformationUnstructured || "Transaction" });
+          accounts.push({ id: uid, name: meta.name || meta.product || meta.account_id?.iban || "Account", iban: meta.account_id?.iban || "", balances: (bal?.balances || []).map((b: any) => ({ amount: b.balance_amount?.amount, currency: b.balance_amount?.currency, type: b.balance_type })) });
+          for (const t of (txns?.transactions || []).slice(0, 200)) {
+            const amt = parseFloat(t.transaction_amount?.amount || "0");
+            const signed = t.credit_debit_indicator === "DBIT" ? -Math.abs(amt) : Math.abs(amt);
+            transactions.push({ accountId: uid, id: t.entry_reference || t.transaction_id || crypto.randomUUID(), date: t.booking_date || t.value_date, amount: signed, currency: t.transaction_amount?.currency, name: t.creditor?.name || t.debtor?.name || (t.remittance_information || [])[0] || "Transaction" });
           }
-        } catch (_) { /* skip an account that errors */ }
+        } catch (_) { /* skip a failing account */ }
       }
-      await upsertRow(username, { accounts, transactions, status: reqn.status });
+      await upsertRow(username, { session_id: session.session_id || null, accounts, transactions, status: "linked" });
       return json({ accounts, count: transactions.length });
     }
 
@@ -147,7 +146,7 @@ Deno.serve(async (req) => {
     }
 
     return json({ error: "unknown_action" }, 400);
-  } catch (e) {
+  } catch (e: any) {
     return json({ error: "provider_error", message: String(e?.message || e) }, 502);
   }
 });

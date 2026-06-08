@@ -23,7 +23,8 @@ const TONE = { green: "#3ad07f", orange: "#f5953a", red: "#f0556f" };
 // Sidebar shell: Overview is the home panel; sections are in-place tabs.
 export default function Dashboard({ onEdit, onLogout }) {
   const { state } = usePlanner();
-  const [tab, setTab] = useState("overview");
+  // Land on Settings if we're completing a bank link (redirect just returned).
+  const [tab, setTab] = useState(() => { try { return localStorage.getItem("orcl_bank_code") ? "settings" : "overview"; } catch { return "overview"; } });
   const [detailPlan, setDetailPlan] = useState(null); // debt sub-view
   const go = (t) => { setTab(t); setDetailPlan(null); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const hasDebt = debtsOf(state).length > 0;

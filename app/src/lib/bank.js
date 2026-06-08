@@ -22,8 +22,8 @@ async function call(action, session, extra = {}) {
 
 export const bank = {
   institutions: (s) => call("institutions", s),
-  start: (s, institutionId) => call("start", s, { institutionId }),
-  finish: (s) => call("finish", s),
+  start: (s, name, country) => call("start", s, { name, country }),
+  finish: (s, code) => call("finish", s, { code }),
   data: (s) => call("data", s),
   disconnect: (s) => call("disconnect", s),
 };

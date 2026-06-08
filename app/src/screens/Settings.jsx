@@ -129,7 +129,7 @@ function GoalsCard({ state, update }) {
   );
 }
 
-const PENDING_KEY = "orcl_bank_pending";
+const BANK_CODE_KEY = "orcl_bank_code";
 
 function BankCard({ session }) {
   const [view, setView] = useState("loading"); // loading | off | none | picker | connected | error
@@ -148,12 +148,12 @@ function BankCard({ session }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const pending = (() => { try { return localStorage.getItem(PENDING_KEY); } catch { return null; } })();
-      const r = pending ? await bank.finish(session) : await bank.data(session);
+      let code = null; try { code = localStorage.getItem(BANK_CODE_KEY); } catch {}
+      const r = code ? await bank.finish(session, code) : await bank.data(session);
       if (!alive) return;
-      try { localStorage.removeItem(PENDING_KEY); } catch {}
+      try { localStorage.removeItem(BANK_CODE_KEY); } catch {}
       if (r.status === 503 || r.error === "not_configured") return setView("off");
-      if (!r.ok && r.error && r.error !== "no_link") { setMsg(friendly(r)); return setView(pending ? "error" : "none"); }
+      if (!r.ok && r.error && r.error !== "no_code") { setMsg(friendly(r)); return setView(code ? "error" : "none"); }
       showData(r);
     })();
     return () => { alive = false; };
@@ -170,10 +170,9 @@ function BankCard({ session }) {
 
   const pick = async (inst) => {
     setBusy(true);
-    const r = await bank.start(session, inst.id);
+    const r = await bank.start(session, inst.name, inst.country);
     setBusy(false);
     if (!r.ok || !r.link) { setMsg(friendly(r)); return setView("error"); }
-    try { localStorage.setItem(PENDING_KEY, "1"); } catch {}
     window.location.href = r.link;
   };
 
@@ -214,7 +213,7 @@ function BankCard({ session }) {
             className="mb-2 w-full rounded-[10px] border border-border bg-[#0b0f17] px-3 py-2.5 text-[14px] text-ink outline-none focus:border-accent" />
           <div className="max-h-[220px] overflow-y-auto thin-scroll">
             {insts.filter((i) => i.name.toLowerCase().includes(q.toLowerCase())).map((i) => (
-              <button key={i.id} onClick={() => pick(i)} disabled={busy}
+              <button key={i.name} onClick={() => pick(i)} disabled={busy}
                 className="flex w-full items-center gap-3 border-b border-border/60 px-2 py-2.5 text-left text-sm last:border-0 hover:bg-[#0c1420]">
                 {i.logo ? <img src={i.logo} alt="" className="h-6 w-6 rounded" /> : <span className="h-6 w-6 rounded bg-[#0f241c]" />}
                 <span className="truncate">{i.name}</span>

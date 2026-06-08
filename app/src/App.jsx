@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlannerProvider, usePlanner, debtsOf } from "./state.jsx";
 import { AuthProvider, useAuth } from "./lib/auth.jsx";
 import Welcome from "./screens/Welcome.jsx";
@@ -26,6 +26,17 @@ function Shell() {
       return !!(raw.profile?.income || raw.income);
     } catch { return false; }
   })();
+
+  // Returning from a bank consent redirect (Enable Banking adds ?code=…):
+  // stash the code, clean the URL, and drop the user into the dashboard so the
+  // Settings → Connected banks card can finish the link.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (!code) return;
+    try { localStorage.setItem("orcl_bank_code", code); } catch {}
+    window.history.replaceState({}, "", window.location.pathname);
+    if (session) setScreen("dashboard");
+  }, []); // eslint-disable-line
 
   const startNew = () => { setWizardFirst(true); go("wizard"); };
   // "Continue" only goes to the dashboard if actually signed in. A local draft
