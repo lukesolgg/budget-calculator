@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card } from "../components/ui.jsx";
-import { usePlanner, toStored, initialState, debtsOf } from "../state.jsx";
+import { usePlanner, toStored, initialState } from "../state.jsx";
 import { useAuth } from "../lib/auth.jsx";
-import { SECTIONS, sectionByKey } from "../data/sections.js";
+import { SECTIONS } from "../data/sections.js";
+import { bank } from "../lib/bank.js";
+import { fmt } from "../lib/engine.js";
 
 // Settings / profile: account, goals, data controls.
 export default function Settings({ onEdit, onLogout }) {
@@ -19,6 +21,7 @@ export default function Settings({ onEdit, onLogout }) {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
         <div className="flex flex-col gap-5">
           <AccountCard session={session} saveState={saveState} changePin={changePin} logout={logout} onLogout={onLogout} />
+          <BankCard session={session} />
           <DetailsCard onEdit={onEdit} />
           <DataCard state={state} setState={setState} wipeData={wipeData} onLogout={onLogout} />
         </div>
@@ -124,6 +127,146 @@ function GoalsCard({ state, update }) {
       </div>
     </Section>
   );
+}
+
+const PENDING_KEY = "orcl_bank_pending";
+
+function BankCard({ session }) {
+  const [view, setView] = useState("loading"); // loading | off | none | picker | connected | error
+  const [msg, setMsg] = useState("");
+  const [insts, setInsts] = useState([]);
+  const [q, setQ] = useState("");
+  const [accounts, setAccounts] = useState([]);
+  const [txns, setTxns] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  const showData = (r) => {
+    if (r.accounts && r.accounts.length) { setAccounts(r.accounts); setTxns(r.transactions || []); setView("connected"); }
+    else setView("none");
+  };
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const pending = (() => { try { return localStorage.getItem(PENDING_KEY); } catch { return null; } })();
+      const r = pending ? await bank.finish(session) : await bank.data(session);
+      if (!alive) return;
+      try { localStorage.removeItem(PENDING_KEY); } catch {}
+      if (r.status === 503 || r.error === "not_configured") return setView("off");
+      if (!r.ok && r.error && r.error !== "no_link") { setMsg(friendly(r)); return setView(pending ? "error" : "none"); }
+      showData(r);
+    })();
+    return () => { alive = false; };
+  }, []); // eslint-disable-line
+
+  const connect = async () => {
+    setBusy(true); setMsg("");
+    const r = await bank.institutions(session);
+    setBusy(false);
+    if (r.status === 503) return setView("off");
+    if (!r.ok) { setMsg(friendly(r)); return setView("error"); }
+    setInsts(r.institutions || []); setView("picker");
+  };
+
+  const pick = async (inst) => {
+    setBusy(true);
+    const r = await bank.start(session, inst.id);
+    setBusy(false);
+    if (!r.ok || !r.link) { setMsg(friendly(r)); return setView("error"); }
+    try { localStorage.setItem(PENDING_KEY, "1"); } catch {}
+    window.location.href = r.link;
+  };
+
+  const disconnect = async () => {
+    if (!window.confirm("Disconnect your bank? Orcl. will forget the imported data.")) return;
+    await bank.disconnect(session);
+    setAccounts([]); setTxns([]); setView("none");
+  };
+
+  return (
+    <Section title="Connected banks" desc="Link your bank (read-only) to auto-import balances & spending.">
+      <span className="mb-3 inline-block rounded-full border border-[#1e3a30] bg-[#0c1a15] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[.08em] text-accent">Beta</span>
+
+      {view === "loading" && <p className="text-[13px] text-muted">Checking…</p>}
+
+      {view === "off" && (
+        <p className="rounded-lg border border-border bg-[#0c121d] px-3.5 py-2.5 text-[13px] text-muted">Bank linking isn't switched on yet — coming soon.</p>
+      )}
+
+      {view === "none" && (
+        <>
+          {msg && <p className="mb-2 text-[12px] text-warn">{msg}</p>}
+          <p className="mb-3 text-[13px] text-muted">Securely connect through Open Banking — you log in at your bank, we only ever see balances & transactions (never your login).</p>
+          <Button onClick={connect} disabled={busy} className="px-3.5 py-2 text-[13px]">{busy ? "Loading…" : "🔗 Connect a bank"}</Button>
+        </>
+      )}
+
+      {view === "error" && (
+        <>
+          <p className="mb-2 text-[13px] text-bad">{msg || "Something went wrong."}</p>
+          <Button variant="ghost" onClick={() => setView("none")} className="px-3.5 py-2 text-[13px]">Try again</Button>
+        </>
+      )}
+
+      {view === "picker" && (
+        <div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your bank…"
+            className="mb-2 w-full rounded-[10px] border border-border bg-[#0b0f17] px-3 py-2.5 text-[14px] text-ink outline-none focus:border-accent" />
+          <div className="max-h-[220px] overflow-y-auto thin-scroll">
+            {insts.filter((i) => i.name.toLowerCase().includes(q.toLowerCase())).map((i) => (
+              <button key={i.id} onClick={() => pick(i)} disabled={busy}
+                className="flex w-full items-center gap-3 border-b border-border/60 px-2 py-2.5 text-left text-sm last:border-0 hover:bg-[#0c1420]">
+                {i.logo ? <img src={i.logo} alt="" className="h-6 w-6 rounded" /> : <span className="h-6 w-6 rounded bg-[#0f241c]" />}
+                <span className="truncate">{i.name}</span>
+              </button>
+            ))}
+            {!insts.length && <p className="py-3 text-[13px] text-muted">No banks returned.</p>}
+          </div>
+          <button onClick={() => setView("none")} className="mt-2 text-[12px] text-muted hover:text-ink">Cancel</button>
+        </div>
+      )}
+
+      {view === "connected" && (
+        <div>
+          <div className="mb-3 space-y-1.5">
+            {accounts.map((a) => {
+              const bal = a.balances?.[0];
+              return (
+                <div key={a.id} className="flex items-center justify-between rounded-lg border border-border bg-[#0c121d] px-3 py-2 text-sm">
+                  <span className="truncate"><b>{a.name}</b>{a.iban ? <span className="ml-2 text-[11px] text-muted">···{a.iban.slice(-4)}</span> : ""}</span>
+                  {bal && <span className="font-bold tabular-nums">{fmt(parseFloat(bal.amount) || 0)}</span>}
+                </div>
+              );
+            })}
+          </div>
+          {txns.length > 0 && (
+            <>
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-muted">Recent transactions</div>
+              <div className="max-h-[180px] space-y-0.5 overflow-y-auto thin-scroll">
+                {txns.slice(0, 25).map((t, i) => (
+                  <div key={t.id || i} className="flex items-center justify-between gap-2 px-1 py-1 text-[12px]">
+                    <span className="truncate text-muted">{t.name}</span>
+                    <span className={`shrink-0 tabular-nums ${parseFloat(t.amount) < 0 ? "text-ink" : "text-good"}`}>{fmt(parseFloat(t.amount) || 0)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="mt-3 flex gap-2">
+            <Button variant="ghost" onClick={connect} className="px-3 py-1.5 text-[12px]">Add another</Button>
+            <button onClick={disconnect} className="rounded-xl border border-[#5a1f1f] bg-[#1a0f0f] px-3 py-1.5 text-[12px] font-semibold text-bad transition hover:brightness-125">Disconnect</button>
+          </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function friendly(r) {
+  if (r.error === "network") return "Couldn't reach the server. Try again.";
+  if (r.error === "unauthorized") return "Session expired — sign in again.";
+  if (r.error === "provider_error") return "The bank service had a problem. Try again shortly.";
+  return r.message || "Something went wrong.";
 }
 
 function DetailsCard({ onEdit }) {

@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = "https://umhhhlfkolxzykkzvhte.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KTqjrDktSE7Ns6IhSE7gbQ_pcrHBrzT";
+export const SUPABASE_FN = `${SUPABASE_URL}/functions/v1`;
 
 export const useSupabase = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 const sb = useSupabase ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
