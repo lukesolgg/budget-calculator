@@ -7,7 +7,7 @@ import {
   usePlanner, monthlyIncomeOf, debtsOf, livingOf, expenseItemsOf,
 } from "../state.jsx";
 import { SECTIONS, sectionByKey } from "../data/sections.js";
-import { fmt, monthsToStr, buildPlans, simulateDetailed, projectSavings } from "../lib/engine.js";
+import { fmt, monthsToStr, buildPlans, simulateDetailed } from "../lib/engine.js";
 import Savings from "./Savings.jsx";
 import Career from "./Career.jsx";
 import Results from "./Results.jsx";
@@ -174,7 +174,6 @@ function Overview({ onOpenTab, onEdit }) {
   }, [expItems, minTotal, aExtra, aSav, funLeft]);
   const breakdownSum = breakdown.reduce((s, c) => s + c.value, 0);
 
-  const recs = buildRecommendations({ debts, income, living, spare, mortgageOn: state.mortgage.on });
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
@@ -217,11 +216,11 @@ function Overview({ onOpenTab, onEdit }) {
 
         <div className="mt-5 border-t border-border pt-5">
           <h3 className="mb-2.5 text-[15px] font-bold">What do you want to do?</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <ActionCard emoji="🔎" title="In-depth budget" desc="Tweak every part of your budget." onOpen={() => onOpenTab("budget")} />
-            <ActionCard emoji="💳" title="Debt planning" desc="Your payoff plan & payments." onOpen={() => onOpenTab("debt")} />
-            <ActionCard emoji="🛟" title="Emergency fund" desc="Plan a 3–6 month safety net." onOpen={() => onOpenTab("emergency")} />
-            <ActionCard emoji="🚀" title="Side hustles" desc="Boost your income." soon />
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+            <ActionCard emoji="🔎" title="In-depth budget" onOpen={() => onOpenTab("budget")} />
+            <ActionCard emoji="💳" title="Debt planning" onOpen={() => onOpenTab("debt")} />
+            <ActionCard emoji="🛟" title="Emergency fund" onOpen={() => onOpenTab("emergency")} />
+            <ActionCard emoji="🚀" title="Side hustles" soon />
           </div>
         </div>
       </Card>
@@ -231,16 +230,6 @@ function Overview({ onOpenTab, onEdit }) {
         <AllocationCard income={income} living={living} minTotal={minTotal} debtMonthly={debtMonthly} savings={aSav} fun={funLeft} freq={state.payFrequency || "monthly"} />
         <Snapshot6 income={income} living={living} debts={debts} extra={aExtra} monthlyToDebt={debtMonthly} totalDebt={totalDebt} />
       </div>
-
-      {/* Recommendations (full width) */}
-      {recs.length > 0 && (
-        <div className="lg:col-span-2">
-          <h2 className="mb-2 text-[16px] font-bold">Recommended for you <span className="text-[12px] font-normal text-muted">· next steps from your numbers</span></h2>
-          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
-            {recs.map((r) => <RecCard key={r.id} r={r} onOpen={LIVE.has(r.sectionKey) ? () => onOpenTab(r.sectionKey) : null} />)}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -375,56 +364,18 @@ function GroupedBudget({ breakdown, income }) {
   );
 }
 
-function ActionCard({ emoji, title, desc, onOpen, soon }) {
+function ActionCard({ emoji, title, onOpen, soon }) {
   return (
     <button
       onClick={soon ? undefined : onOpen}
-      className={`flex flex-col items-start rounded-2xl border border-border bg-[#0a120f]/80 p-4 text-left transition ${soon ? "cursor-default opacity-90" : "hover:-translate-y-0.5 hover:border-[#244a3c] hover:shadow-[0_12px_34px_-16px_rgba(47,230,166,.6)]"}`}
+      className={`flex items-center gap-2.5 rounded-xl border border-border bg-[#0a120f]/80 p-2.5 text-left transition ${soon ? "cursor-default opacity-90" : "hover:border-[#244a3c] hover:shadow-[0_10px_28px_-16px_rgba(47,230,166,.6)]"}`}
     >
-      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f241c] text-xl">{emoji}</div>
-      <div className="flex items-center gap-2">
-        <h3 className="text-[15px] font-bold">{title}</h3>
-        {soon && <span className="rounded-full border border-[#2a3b34] bg-[#0c1a15] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[.06em] text-muted">Soon</span>}
-      </div>
-      <p className="mt-1 flex-1 text-[12.5px] leading-snug text-muted">{desc}</p>
-      {!soon && (
-        <span className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold text-accent">
-          Open <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-        </span>
-      )}
-    </button>
-  );
-}
-
-/* ------------------------------------------------------- recs + misc -- */
-function buildRecommendations({ debts, income, living, spare, mortgageOn }) {
-  const out = [];
-  const debtFreeUser = debts.length === 0;
-  const accruing = debts.filter((d) => d.freeMonths === 0 && d.rate > 0);
-  const top = accruing.sort((a, b) => b.rate - a.rate)[0];
-
-  if (top) out.push({ id: "debt", emoji: "🔥", sectionKey: "debt", title: `Tackle ${top.name} first`, text: `At ${top.rate}% APR it's your priciest debt — clearing this one first saves the most in interest.` });
-  if (debtFreeUser && income > 0) out.push({ id: "invest", emoji: "📈", sectionKey: "savings", title: "You're debt-free — grow it", text: "No debt to clear, so redirect your spare cash into high-yield savings and simple investments." });
-  if (spare > 0 && !debtFreeUser) {
-    const yr = projectSavings({ monthly: spare, annualRate: 0.045, years: 1 }).balance;
-    out.push({ id: "spare", emoji: "💷", sectionKey: "savings", title: `Put your ${fmt(spare)}/mo to work`, text: `You've about ${fmt(spare)} spare each month — in a top UK account that's roughly ${fmt(yr)} after a year.` });
-  }
-  if (living > 0) out.push({ id: "emergency", emoji: "🛟", sectionKey: "emergency", title: "Build an emergency fund", text: `Aim for ${fmt(living * 3)}–${fmt(living * 6)} (3–6 months of essentials) so a surprise bill never derails your plan.` });
-  if (!mortgageOn) out.push({ id: "mortgage", emoji: "🏠", sectionKey: "mortgage", title: "Thinking about buying?", text: "You don't have a mortgage yet — our upcoming mortgage calculator will map out deposits and repayments." });
-  if (income > 0) out.push({ id: "pension", emoji: "👴", sectionKey: "pensions", title: "Don't forget your pension", text: "Small top-ups now compound massively by retirement. Our pension tools are on the way." });
-
-  return out.slice(0, 3);
-}
-
-function RecCard({ r, onOpen }) {
-  return (
-    <button onClick={onOpen || undefined} className={`flex items-start gap-3 rounded-xl border border-border bg-[#0a120f]/80 p-3 text-left ${onOpen ? "transition hover:-translate-y-0.5 hover:border-[#244a3c]" : "cursor-default"}`}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0f241c] text-lg">{r.emoji}</span>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0f241c] text-lg">{emoji}</span>
       <span className="min-w-0">
-        <span className="block text-[13.5px] font-bold leading-snug">{r.title}</span>
-        <span className="mt-0.5 block text-[12px] leading-snug text-muted">{r.text}</span>
-        {onOpen ? <span className="mt-1 inline-block text-[12px] font-semibold text-accent">View now →</span>
-          : <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-[.06em] text-muted">Coming soon</span>}
+        <span className="block truncate text-[13px] font-bold leading-tight">{title}</span>
+        {soon
+          ? <span className="text-[9px] font-bold uppercase tracking-[.06em] text-muted">Coming soon</span>
+          : <span className="text-[11px] font-semibold text-accent">Open →</span>}
       </span>
     </button>
   );
